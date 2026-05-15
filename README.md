@@ -21,7 +21,13 @@ npm run lint
 
 ## Configuracio
 
-Copia `.env.example` a `.env.local` si vols canviar la URL del backend:
+Per treballar en local, crea un `.env.local` per apuntar el frontend al backend local:
+
+```bash
+VITE_API_BASE_URL=http://localhost:8000
+```
+
+Si vols apuntar a un altre backend, pots canviar aquest valor. L'exemple base del projecte es:
 
 ```bash
 VITE_API_BASE_URL=https://asw-projectx.duckdns.org
