@@ -23,28 +23,28 @@ export function IssueDetailPage() {
   const { currentUser } = useCurrentUser();
   const [comment, setComment] = useState("");
 
-  const issueState = useAsync(() => getIssue(currentUser.apiKey, issueId!), [
+  const issueState = useAsync(() => getIssue(currentUser.apiKey, issueId), [
     currentUser.apiKey,
     issueId,
   ]);
-  const commentsState = useAsync(() => listIssueComments(currentUser.apiKey, issueId!), [
+  const commentsState = useAsync(() => listIssueComments(currentUser.apiKey, issueId), [
     currentUser.apiKey,
     issueId,
   ]);
-  const activitiesState = useAsync(() => listIssueActivities(currentUser.apiKey, issueId!), [
+  const activitiesState = useAsync(() => listIssueActivities(currentUser.apiKey, issueId), [
     currentUser.apiKey,
     issueId,
   ]);
 
-  async function runIssueAction(action: () => Promise<unknown>) {
+  async function runIssueAction(action) {
     await action();
     await issueState.reload();
   }
 
-  async function submitComment(event: React.FormEvent<HTMLFormElement>) {
+  async function submitComment(event) {
     event.preventDefault();
     if (!comment.trim()) return;
-    await createIssueComment(currentUser.apiKey, issueId!, comment.trim());
+    await createIssueComment(currentUser.apiKey, issueId, comment.trim());
     setComment("");
     await commentsState.reload();
   }
@@ -172,7 +172,7 @@ export function IssueDetailPage() {
   );
 }
 
-function Info({ label, value }: { label: string; value: string }) {
+function Info({ label, value }) {
   return (
     <div className="info-item">
       <span>{label}</span>

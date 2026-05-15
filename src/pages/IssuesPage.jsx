@@ -7,14 +7,13 @@ import { LoadingState } from "../components/LoadingState";
 import { listIssues } from "../api/issues";
 import { useCurrentUser } from "../context/currentUser";
 import { useAsync } from "../hooks/useAsync";
-import type { IssueFilters } from "../types/api";
 
 export function IssuesPage() {
   const { currentUser } = useCurrentUser();
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<IssueFilters["sort_by"]>("updated");
+  const [sortBy, setSortBy] = useState("updated");
 
-  const filters = useMemo<IssueFilters>(
+  const filters = useMemo(
     () => ({
       search: search.trim() || undefined,
       sort_by: sortBy,
@@ -52,7 +51,7 @@ export function IssuesPage() {
 
         <label className="select-field">
           <span>Ordenar</span>
-          <select value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)}>
+          <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
             <option value="updated">Actualitzacio</option>
             <option value="issue">Numero</option>
             <option value="status">Estat</option>

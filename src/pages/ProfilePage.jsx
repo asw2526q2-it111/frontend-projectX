@@ -10,15 +10,15 @@ export function ProfilePage() {
   const { username } = useParams();
   const { currentUser } = useCurrentUser();
 
-  const userState = useAsync(() => getUser(currentUser.apiKey, username!), [
+  const userState = useAsync(() => getUser(currentUser.apiKey, username), [
     currentUser.apiKey,
     username,
   ]);
-  const assignedState = useAsync(() => listAssignedIssues(currentUser.apiKey, username!), [
+  const assignedState = useAsync(() => listAssignedIssues(currentUser.apiKey, username), [
     currentUser.apiKey,
     username,
   ]);
-  const watchedState = useAsync(() => listWatchedIssues(currentUser.apiKey, username!), [
+  const watchedState = useAsync(() => listWatchedIssues(currentUser.apiKey, username), [
     currentUser.apiKey,
     username,
   ]);

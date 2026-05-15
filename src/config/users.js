@@ -1,10 +1,4 @@
-export type FrontendUser = {
-  username: string;
-  fullName: string;
-  apiKey: string;
-};
-
-export const FRONTEND_USERS: FrontendUser[] = [
+export const FRONTEND_USERS = [
   {
     username: "ana",
     fullName: "Ana Serra",

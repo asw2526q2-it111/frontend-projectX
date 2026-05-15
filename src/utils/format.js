@@ -1,4 +1,4 @@
-export function formatDate(value?: string | null) {
+export function formatDate(value) {
   if (!value) return "Sense data";
 
   return new Intl.DateTimeFormat("ca-ES", {
@@ -8,7 +8,7 @@ export function formatDate(value?: string | null) {
   }).format(new Date(value));
 }
 
-export function initials(name: string) {
+export function initials(name) {
   return name
     .split(" ")
     .filter(Boolean)

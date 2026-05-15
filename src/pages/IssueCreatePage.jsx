@@ -10,9 +10,9 @@ export function IssueCreatePage() {
   const [description, setDescription] = useState("");
   const [deadline, setDeadline] = useState("");
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event) {
     event.preventDefault();
     setSaving(true);
     setError(null);

@@ -1,13 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
-type AsyncState<T> = {
-  data: T | null;
-  error: Error | null;
-  loading: boolean;
-};
-
-export function useAsync<T>(loader: () => Promise<T>, dependencies: React.DependencyList) {
-  const [state, setState] = useState<AsyncState<T>>({
+export function useAsync(loader, dependencies) {
+  const [state, setState] = useState({
     data: null,
     error: null,
     loading: true,
@@ -26,7 +20,6 @@ export function useAsync<T>(loader: () => Promise<T>, dependencies: React.Depend
         loading: false,
       });
     }
-    // The callers own the dependency list, mirroring useEffect's API.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, dependencies);
 

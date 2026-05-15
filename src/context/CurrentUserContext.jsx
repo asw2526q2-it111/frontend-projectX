@@ -1,8 +1,8 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { FRONTEND_USERS } from "../config/users";
 import { CurrentUserContext } from "./currentUser";
 
-export function CurrentUserProvider({ children }: { children: ReactNode }) {
+export function CurrentUserProvider({ children }) {
   const [currentUsername, setCurrentUsername] = useState(FRONTEND_USERS[0].username);
 
   const value = useMemo(() => {

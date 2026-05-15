@@ -1,10 +1,4 @@
-export function EmptyState({
-  title,
-  description,
-}: {
-  title: string;
-  description?: string;
-}) {
+export function EmptyState({ title, description }) {
   return (
     <div className="state">
       <h2>{title}</h2>

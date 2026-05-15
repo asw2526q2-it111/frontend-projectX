@@ -5,7 +5,7 @@ import App from "./App";
 import { CurrentUserProvider } from "./context/CurrentUserContext";
 import "./styles/index.css";
 
-createRoot(document.getElementById("root")!).render(
+createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
       <CurrentUserProvider>
