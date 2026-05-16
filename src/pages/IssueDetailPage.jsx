@@ -6,22 +6,28 @@ import { StatusPill } from "../components/StatusPill";
 import {
   assignMe,
   createIssueComment,
+  deleteIssueComment,
   getIssue,
   listIssueActivities,
   listIssueComments,
   unassignMe,
   unwatchIssue,
+  updateIssueComment,
   watchIssue,
 } from "../api/issues";
 import { EmptyState } from "../components/EmptyState";
 import { useCurrentUser } from "../context/currentUser";
 import { useAsync } from "../hooks/useAsync";
-import { formatDate } from "../utils/format";
+import { formatDate, initials } from "../utils/format";
 
 export function IssueDetailPage() {
   const { issueId } = useParams();
   const { currentUser } = useCurrentUser();
   const [comment, setComment] = useState("");
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editingCommentContent, setEditingCommentContent] = useState("");
+  const [commentActionError, setCommentActionError] = useState("");
+  const [commentActionLoading, setCommentActionLoading] = useState(false);
   const [discussionView, setDiscussionView] = useState("comments"); //Per saber quina pestanya s'esta mostrant a discussion box
 
   const issueState = useAsync(() => getIssue(currentUser.apiKey, issueId), [
@@ -43,6 +49,194 @@ export function IssueDetailPage() {
     await createIssueComment(currentUser.apiKey, issueId, comment.trim());
     setComment("");
     await commentsState.reload();
+  }
+
+  function getActionErrorMessage(error, fallback) {
+    if (error?.details?.detail) return String(error.details.detail);
+    if (error instanceof Error && error.message) return error.message;
+    return fallback;
+  }
+
+  function isCommentOwner(comment) {
+    return comment.created_by?.username === currentUser.username;
+  }
+
+  function startEditingComment(comment) {
+    setCommentActionError("");
+    setEditingCommentId(comment.id);
+    setEditingCommentContent(comment.content);
+  }
+
+  function cancelEditingComment() {
+    setCommentActionError("");
+    setEditingCommentId(null);
+    setEditingCommentContent("");
+  }
+
+  async function saveEditedComment(commentId) {
+    const content = editingCommentContent.trim();
+    if (!content) {
+      setCommentActionError("El comentari no pot estar buit.");
+      return;
+    }
+
+    setCommentActionLoading(true);
+    setCommentActionError("");
+
+    try {
+      await updateIssueComment(currentUser.apiKey, commentId, content);
+      cancelEditingComment();
+      await commentsState.reload();
+    } catch (error) {
+      setCommentActionError(
+        getActionErrorMessage(error, "No s'ha pogut guardar el comentari.")
+      );
+    } finally {
+      setCommentActionLoading(false);
+    }
+  }
+
+  async function removeComment(commentId) {
+    if (!window.confirm("Vols eliminar aquest comentari?")) return;
+
+    setCommentActionLoading(true);
+    setCommentActionError("");
+
+    try {
+      await deleteIssueComment(currentUser.apiKey, commentId);
+      if (String(editingCommentId) === String(commentId)) cancelEditingComment();
+      await commentsState.reload();
+    } catch (error) {
+      setCommentActionError(
+        getActionErrorMessage(error, "No s'ha pogut eliminar el comentari.")
+      );
+    } finally {
+      setCommentActionLoading(false);
+    }
+  }
+
+  function renderUserAvatar(user) {
+    const userInitials = user.initials ?? initials(user.full_name ?? user.username);
+
+    if (user.avatar) {
+      return (
+        <img
+          className="avatar avatar--sm"
+          src={user.avatar}
+          alt={`Avatar de ${user.username}`}
+        />
+      );
+    }
+
+    return (
+      <div className="avatar avatar--sm" aria-hidden="true">
+        {userInitials}
+      </div>
+    );
+  }
+
+  function renderCommentItem(item) {
+    const author = item.created_by;
+    const isOwner = isCommentOwner(item);
+    const isEditing = String(editingCommentId) === String(item.id);
+
+    return (
+      <article key={item.id} className="comment-item">
+        <header className="comment-item__header">
+          <div className="comment-item__author">
+            {renderUserAvatar(author)}
+            <strong>{author.full_name ?? author.username}</strong>
+          </div>
+          <div className="comment-item__meta">
+            <time className="comment-item__date" dateTime={item.created_at}>
+              {formatDate(item.created_at)}
+            </time>
+            {isOwner && !isEditing ? (
+              <div className="comment-item__actions">
+                <button
+                  className="button comment-item__action"
+                  type="button"
+                  disabled={commentActionLoading}
+                  onClick={() => startEditingComment(item)}
+                >
+                  Editar
+                </button>
+                <button
+                  className="button comment-item__action comment-item__action--danger"
+                  type="button"
+                  disabled={commentActionLoading}
+                  onClick={() => void removeComment(item.id)}
+                >
+                  Eliminar
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </header>
+
+        {isEditing ? (
+          <div className="comment-item__edit">
+            <textarea
+              value={editingCommentContent}
+              onChange={(event) => setEditingCommentContent(event.target.value)}
+              aria-label="Editar comentari"
+            />
+            <div className="comment-item__edit-actions">
+              <button
+                className="button button-primary"
+                type="button"
+                disabled={commentActionLoading}
+                onClick={() => void saveEditedComment(item.id)}
+              >
+                Guardar
+              </button>
+              <button
+                className="button"
+                type="button"
+                disabled={commentActionLoading}
+                onClick={cancelEditingComment}
+              >
+                Cancel·lar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="comment-item__content">{item.content}</p>
+        )}
+      </article>
+    );
+  }
+
+  function getActivityUser(item) {
+    return item.actor ?? item.user ?? item.created_by ?? null;
+  }
+
+  function renderActivityItem(item) {
+    const author = getActivityUser(item);
+    const authorName = author ? author.full_name ?? author.username : "Sistema";
+
+    return (
+      <article key={item.id} className="comment-item activity-item">
+        <header className="comment-item__header">
+          <div className="comment-item__author">
+            {author ? (
+              renderUserAvatar(author)
+            ) : (
+              <div className="avatar avatar--sm" aria-hidden="true">
+                S
+              </div>
+            )}
+            <strong>{authorName}</strong>
+          </div>
+          <div className="comment-item__meta">
+            <time className="comment-item__date" dateTime={item.created_at}>
+              {formatDate(item.created_at)}
+            </time>
+          </div>
+        </header>
+        <p className="comment-item__content">{item.summary}</p>
+      </article>
+    );
   }
 
   if (issueState.loading) return <LoadingState />;
@@ -68,57 +262,66 @@ export function IssueDetailPage() {
     const createdAt = issue.date_created ?? issue.created_at;
 
     return (
-      <div className="main-box">
-        <h1 className="main-box__id">Issue #{issue.id}</h1>
-        <h2 className="main-box__title">{issue.title}</h2>
-        <p className="detail-description">{issue.description || "Sense descripcio."}</p>
-
-        <div className="main-box__creator">
-          {creator.avatar ? (
-            <img
-              className="avatar avatar--sm"
-              src={creator.avatar}
-              alt={`Avatar de ${creator.username}`}
-            />
-          ) : (
-            <div className="avatar avatar--sm" aria-hidden="true">
-              {creatorInitials}
-            </div>
-          )}
+      <section className="panel issue-detail-panel">
+        <div className="issue-detail-panel__top">
           <div>
-            <span className="main-box__creator-name">@{creator.username}</span>
-            <time className="main-box__creator-date" dateTime={createdAt}>
-              {formatDate(createdAt)}
-            </time>
+            <h1 className="main-title">#{issue.id} Issue</h1>
+            <h1 className="main-box__title">{issue.title}</h1>
+          </div>
+          <div className="main-box__creator">
+            {creator.avatar ? (
+              <img
+                className="avatar avatar--sm"
+                src={creator.avatar}
+                alt={`Avatar de ${creator.username}`}
+              />
+            ) : (
+              <div className="avatar avatar--sm" aria-hidden="true">
+                {creatorInitials}
+              </div>
+            )}
+            <div>
+              <span className="main-box__creator-name">@{creator.username}</span>
+              <time className="main-box__creator-date" dateTime={createdAt}>
+                {formatDate(createdAt)}
+              </time>
+            </div>
           </div>
         </div>
-      </div>
+        <p className="description-box">{issue.description || "Sense descripcio."}</p>
+      </section>
     );
   }
 
   function attachmentsBox() {
     return (
-      <div className="attachments-box">
-        <h3>Attachments</h3>
+      <section className="panel issue-detail-attachments-panel">
+        <h2>Attachments</h2>
         <p>
           Allowed formats: PDF, images, TXT, MD, CSV, JSON, ZIP, DOC, DOCX, XLS, XLSX, PPT and PPTX.
           Max size: 10 MB.
         </p>
-        <ul>
-          {attachments.map((attachment) => (
-            <li key={attachment.id}>{attachment.file_name}</li>
-          ))}
-        </ul>
+        <div className="attachment-list">
+          {attachments.length > 0 ? (
+            attachments.map((attachment) => (
+              <article className="attachment-item" key={attachment.id}>
+                {attachment.file_name}
+              </article>
+            ))
+          ) : (
+            <p className="muted">No hi ha fitxers adjunts.</p>
+          )}
+        </div>
         <button className="button button-primary" type="button">
           Upload
         </button>
-      </div>
+      </section>
     );
   }
 
   function discussionBox() {
     return (
-      <div className="discussion-box">
+      <section className="panel issue-detail-discussion-panel">
         <div className="discussion-tabs" role="tablist" aria-label="Discussions">
           <button
             className={`discussion-tab${discussionView === "comments" ? " discussion-tab--active" : ""}`}
@@ -152,48 +355,60 @@ export function IssueDetailPage() {
                 Publicar
               </button>
             </form>
-            <div className="activity-list">
-              {comments.map((item) => (
-                <article key={item.id} className="activity-item">
-                  <strong>{item.created_by.full_name}</strong>
-                  <p>{item.content}</p>
-                  <span>{formatDate(item.created_at)}</span>
-                </article>
-              ))}
+            {commentActionError ? (
+              <p className="form-error comment-action-error">{commentActionError}</p>
+            ) : null}
+            <div className="comment-list">
+              {comments.length > 0 ? (
+                comments.map((item) => renderCommentItem(item)) //prepara la box de cada comentari, amb els botons si calen
+              ) : (
+                <p className="muted">Encara no hi ha comentaris.</p>
+              )}
             </div>
           </div>
         ) : (
           <div className="discussion-panel" role="tabpanel">
-            <div className="activity-list">
-              {activities.map((item) => (
-                <article key={item.id} className="activity-item">
-                  <strong>{item.summary}</strong>
-                  <span>{formatDate(item.created_at)}</span>
-                </article>
-              ))}
+            <div className="comment-list">
+              {activities.length > 0 ? (
+                activities.map((item) => renderActivityItem(item))
+              ) : (
+                <p className="muted">Encara no hi ha activitat.</p>
+              )}
             </div>
           </div>
         )}
-      </div>
+      </section>
     );
   }
 
   function lateralBox() {
-    //Status section
-    //Assigned section
-    //Watchers section
-    //Buttons section
+    return (
+      <section className="panel issue-detail-lateral-panel" aria-label="Issue metadata">
+        {/* Status section */}
+        {/* Assigned section */}
+        {/* Watchers section */}
+        {/* Buttons section */}
+      </section>
+    );
   }
 
   return (
-    <section className="page-stack">
+    <div className="issue-workspace issue-detail-page">
       <Link className="back-link" to="/issues">
         Tornar a issues
       </Link>
 
-      {mainBox()}
-      {attachmentsBox()}
-      {discussionBox()}
-    </section>
+      <div className="issue-detail-layout">
+        <div className="issue-detail-main page-stack">
+          {mainBox()}
+          {attachmentsBox()}
+          {discussionBox()}
+        </div>
+
+        <aside className="right-panel issue-detail-sidebar">
+          {lateralBox()}
+        </aside>
+      </div>
+    </div>
   );
 }
