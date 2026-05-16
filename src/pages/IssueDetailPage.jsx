@@ -339,8 +339,9 @@ export function IssueDetailPage() {
             aria-selected={discussionView === "activities"}
             onClick={() => setDiscussionView("activities")}
           >
-            Activitat
+            Activitats
           </button>
+          <br />
         </div>
 
         {discussionView === "comments" ? (
@@ -368,6 +369,7 @@ export function IssueDetailPage() {
           </div>
         ) : (
           <div className="discussion-panel" role="tabpanel">
+            <br />
             <div className="comment-list">
               {activities.length > 0 ? (
                 activities.map((item) => renderActivityItem(item))
@@ -399,16 +401,18 @@ export function IssueDetailPage() {
       </Link>
       <br />
 
-      <div className="issue-detail-layout">
-        <div className="issue-detail-main page-stack">
-          {mainBox()}
-          {attachmentsBox()}
-          {discussionBox()}
-        </div>
+      <div className="issue-detail-body">
+        <div className="issue-detail-layout">
+          <div className="issue-detail-main page-stack">
+            {mainBox()}
+            {attachmentsBox()}
+            {discussionBox()}
+          </div>
 
-        <aside className="right-panel issue-detail-sidebar">
-          {lateralBox()}
-        </aside>
+          <aside className="right-panel issue-detail-sidebar">
+            {lateralBox()}
+          </aside>
+        </div>
       </div>
     </div>
   );

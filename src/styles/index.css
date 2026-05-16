@@ -277,21 +277,18 @@ a {
   color: var(--primary);
 }
 
-.app-shell .workspace .issue-workspace.issue-detail-page {
-  min-height: auto;
-  padding: 0;
-  background: transparent;
-  overflow: visible;
+.issue-detail-page {
+  --issue-detail-lateral-width: 280px;
 }
 
-.issue-detail-page .back-link {
-  display: inline-block;
-  margin-bottom: 16px;
+.issue-detail-body {
+  padding-left: var(--issue-detail-lateral-width);
+  padding-right: var(--issue-detail-lateral-width);
 }
 
 .issue-detail-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
+  grid-template-columns: minmax(0, 1fr) var(--issue-detail-lateral-width);
   gap: 16px;
   align-items: start;
 }
@@ -1184,6 +1181,11 @@ img.avatar.avatar--sm {
 }
 
 @media (max-width: 1180px) {
+  .issue-detail-body {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
   .issue-detail-layout {
     grid-template-columns: 1fr;
   }
