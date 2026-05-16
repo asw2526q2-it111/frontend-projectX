@@ -1,9 +1,20 @@
 import { apiRequest } from "./client";
 
 export function listIssues(apiKey, filters = {}) {
+  const query = {
+    ...filters,
+    q: filters.search ?? filters.q,
+    sort: filters.sort_by ?? filters.sort,
+    dir: filters.sort_direction ?? filters.dir,
+  };
+
+  delete query.search;
+  delete query.sort_by;
+  delete query.sort_direction;
+
   return apiRequest("/api/issues/", {
     apiKey,
-    query: filters,
+    query,
   });
 }
 

@@ -3,7 +3,7 @@ export function formatDate(value) {
 
   return new Intl.DateTimeFormat("ca-ES", {
     day: "2-digit",
-    month: "short",
+    month: "numeric",
     year: "numeric",
   }).format(new Date(value));
 }
