@@ -394,9 +394,10 @@ export function IssueDetailPage() {
 
   return (
     <div className="issue-workspace issue-detail-page">
-      <Link className="back-link" to="/issues">
+      <Link className="button button-primary" to="/issues">
         Tornar a issues
       </Link>
+      <br />
 
       <div className="issue-detail-layout">
         <div className="issue-detail-main page-stack">
