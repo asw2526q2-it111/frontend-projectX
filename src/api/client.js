@@ -4,21 +4,14 @@ export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "https://asw-projectx.duckdns.org";
 
 export class ApiError extends Error {
-  constructor(
-    message: string,
-    public status: number,
-    public details?: unknown
-  ) {
+  constructor(message, status, details) {
     super(message);
+    this.status = status;
+    this.details = details;
   }
 }
 
-type RequestOptions = RequestInit & {
-  apiKey?: string;
-  query?: Record<string, string | string[] | number | boolean | undefined | null>;
-};
-
-function buildUrl(path: string, query?: RequestOptions["query"]) {
+function buildUrl(path, query) {
   const url = new URL(path, API_BASE_URL);
 
   Object.entries(query ?? {}).forEach(([key, value]) => {
@@ -33,20 +26,35 @@ function buildUrl(path: string, query?: RequestOptions["query"]) {
   return url.toString();
 }
 
-export async function apiRequest<T>(path: string, options: RequestOptions = {}) {
+export async function apiRequest(path, options = {}) {
   const { apiKey = FRONTEND_USERS[0]?.apiKey, query, headers, body, ...init } = options;
-  const response = await fetch(buildUrl(path, query), {
-    ...init,
-    body,
-    headers: {
-      Accept: "application/json",
-      ...(body instanceof FormData ? {} : { "Content-Type": "application/json" }),
-      ...(apiKey ? { "X-API-Key": apiKey } : {}),
-      ...headers,
-    },
-  });
+  const defaultHeaders = {
+    Accept: "application/json",
+    ...(apiKey ? { "X-API-Key": apiKey } : {}),
+  };
 
-  if (response.status === 204) return undefined as T;
+  if (body && !(body instanceof FormData)) {
+    defaultHeaders["Content-Type"] = "application/json";
+  }
+
+  const requestUrl = buildUrl(path, query);
+  let response;
+
+  try {
+    response = await fetch(requestUrl, {
+      ...init,
+      body,
+      headers: { ...defaultHeaders, ...headers },
+    });
+  } catch (error) {
+    throw new ApiError(
+      `No s'ha pogut connectar amb l'API a ${requestUrl}. Revisa la URL base, que el backend estigui actiu i la configuracio CORS.`,
+      0,
+      error instanceof Error ? error.message : String(error)
+    );
+  }
+
+  if (response.status === 204) return undefined;
 
   const contentType = response.headers.get("content-type") ?? "";
   const data = contentType.includes("application/json")
@@ -57,5 +65,5 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}) 
     throw new ApiError("La peticio a l'API ha fallat.", response.status, data);
   }
 
-  return data as T;
+  return data;
 }

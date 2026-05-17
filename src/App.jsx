@@ -9,11 +9,11 @@ import { ProfilePage } from "./pages/ProfilePage";
 export default function App() {
   return (
     <Routes>
+      <Route path="/issues" element={<IssuesPage />} />
+      <Route path="/issues/:issueId" element={<IssueDetailPage />} />
       <Route element={<AppLayout />}>
         <Route index element={<Navigate to="/issues" replace />} />
-        <Route path="/issues" element={<IssuesPage />} />
         <Route path="/issues/new" element={<IssueCreatePage />} />
-        <Route path="/issues/:issueId" element={<IssueDetailPage />} />
         <Route path="/profile/:username" element={<ProfilePage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>

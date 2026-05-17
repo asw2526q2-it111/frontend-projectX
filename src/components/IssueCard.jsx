@@ -1,10 +1,9 @@
 import { Link } from "react-router-dom";
 import { CalendarDays, MessageSquareText, UserRound } from "lucide-react";
 import { StatusPill } from "./StatusPill";
-import type { Issue } from "../types/api";
 import { formatDate } from "../utils/format";
 
-export function IssueCard({ issue }: { issue: Issue }) {
+export function IssueCard({ issue }) {
   return (
     <article className="issue-card">
       <div className="issue-card__header">

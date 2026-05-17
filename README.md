@@ -4,7 +4,7 @@ Client web React per a l'API REST d'Issue Hub del projecte ASW.
 
 ## Stack
 
-- React + TypeScript
+- React + JavaScript
 - Vite
 - React Router
 - Fetch API amb header `X-API-Key`
@@ -36,7 +36,7 @@ VITE_API_BASE_URL=https://asw-projectx.duckdns.org
 Els usuaris del selector principal i les seves API keys estan a:
 
 ```text
-src/config/users.ts
+src/config/users.js
 ```
 
 Ara mateix les keys son placeholders. Cal substituir-les per les claus reals del backend.
@@ -53,7 +53,6 @@ src/
   layouts/      Shell principal de l'app
   pages/        Pantalles principals
   styles/       CSS global responsive
-  types/        Tipus TypeScript derivats de l'OpenAPI
   utils/        Helpers de format
 ```
 
