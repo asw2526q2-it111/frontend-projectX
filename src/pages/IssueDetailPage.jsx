@@ -265,7 +265,7 @@ export function IssueDetailPage() {
       <section className="panel issue-detail-panel">
         <div className="issue-detail-panel__top">
           <div>
-            <h1 className="main-title">#{issue.id} Issue</h1>
+            <p className="main-title">#{issue.id} Issue</p>
             <h1 className="main-box__title">{issue.title}</h1>
           </div>
           <div className="main-box__creator">
