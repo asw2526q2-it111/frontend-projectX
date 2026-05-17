@@ -85,6 +85,21 @@ export function createIssueComment(apiKey, issueId, content) {
   });
 }
 
+export function updateIssueComment(apiKey, commentId, content) {
+  return apiRequest(`/api/comments/${commentId}/`, {
+    apiKey,
+    method: "PUT",
+    body: JSON.stringify({ content }),
+  });
+}
+
+export function deleteIssueComment(apiKey, commentId) {
+  return apiRequest(`/api/comments/${commentId}/`, {
+    apiKey,
+    method: "DELETE",
+  });
+}
+
 export function listIssueActivities(apiKey, issueId) {
   return apiRequest(`/api/issues/${issueId}/activities/`, { apiKey });
 }
