@@ -1,5 +1,9 @@
 import { apiRequest } from "./client";
 
+export function listUsers(apiKey) {
+  return apiRequest("/api/users/", { apiKey });
+}
+
 export function getUser(apiKey, username) {
   return apiRequest(`/api/users/${username}/`, { apiKey });
 }
