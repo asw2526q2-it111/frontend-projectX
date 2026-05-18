@@ -1,27 +1,35 @@
-import { Eye, UserCheck, UserMinus } from "lucide-react";
-import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useRef, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { LoadingState } from "../components/LoadingState";
-import { StatusPill } from "../components/StatusPill";
 import {
-  assignMe,
   createIssueComment,
+  deleteIssue,
   deleteIssueComment,
   getIssue,
-  listIssueActivities,
-  listIssueComments,
-  unassignMe,
-  unwatchIssue,
+  getIssueActivities,
+  getIssueAttachments,
+  getIssueComments,
   updateIssueComment,
-  watchIssue,
 } from "../api/issues";
 import { EmptyState } from "../components/EmptyState";
 import { useCurrentUser } from "../context/currentUser";
 import { useAsync } from "../hooks/useAsync";
+import { getApiActionErrorMessage } from "../utils/apiError";
+import { normalizePagedList } from "../utils/apiList";
+import { getActivityActor } from "../utils/activities";
+import {
+  ATTACHMENT_ACCEPT,
+  ATTACHMENT_HELP_FORMATS,
+  ATTACHMENT_HELP_MAX_SIZE,
+  createIssueAttachmentAndReload,
+  normalizeAttachmentList,
+  prepareIssueAttachmentUpload,
+} from "../utils/attachments";
 import { formatDate, initials } from "../utils/format";
 
 export function IssueDetailPage() {
   const { issueId } = useParams();
+  const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
   const [comment, setComment] = useState("");
   const [editingCommentId, setEditingCommentId] = useState(null);
@@ -29,16 +37,25 @@ export function IssueDetailPage() {
   const [commentActionError, setCommentActionError] = useState("");
   const [commentActionLoading, setCommentActionLoading] = useState(false);
   const [discussionView, setDiscussionView] = useState("comments"); //Per saber quina pestanya s'esta mostrant a discussion box
+  const [attachmentUploadError, setAttachmentUploadError] = useState("");
+  const [attachmentUploadLoading, setAttachmentUploadLoading] = useState(false);
+  const [issueDeleteError, setIssueDeleteError] = useState("");
+  const [issueDeleteLoading, setIssueDeleteLoading] = useState(false);
+  const attachmentFileInputRef = useRef(null);
 
   const issueState = useAsync(() => getIssue(currentUser.apiKey, issueId), [
     currentUser.apiKey,
     issueId,
   ]);
-  const commentsState = useAsync(() => listIssueComments(currentUser.apiKey, issueId), [
+  const attachmentsState = useAsync(
+    () => getIssueAttachments(currentUser.apiKey, issueId),
+    [currentUser.apiKey, issueId]
+  );
+  const commentsState = useAsync(() => getIssueComments(currentUser.apiKey, issueId), [
     currentUser.apiKey,
     issueId,
   ]);
-  const activitiesState = useAsync(() => listIssueActivities(currentUser.apiKey, issueId), [
+  const activitiesState = useAsync(() => getIssueActivities(currentUser.apiKey, issueId), [
     currentUser.apiKey,
     issueId,
   ]);
@@ -48,17 +65,57 @@ export function IssueDetailPage() {
     if (!comment.trim()) return;
     await createIssueComment(currentUser.apiKey, issueId, comment.trim());
     setComment("");
-    await commentsState.reload();
+    await Promise.all([commentsState.reload(), activitiesState.reload()]);
   }
 
-  function getActionErrorMessage(error, fallback) {
-    if (error?.details?.detail) return String(error.details.detail);
-    if (error instanceof Error && error.message) return error.message;
-    return fallback;
+  async function handleDeleteIssue() {
+    if (!window.confirm("Segur que vols eliminar aquesta issue?")) return;
+    setIssueDeleteError("");
+    setIssueDeleteLoading(true);
+    try {
+      await deleteIssue(currentUser.apiKey, issueId);
+      navigate("/issues");
+    } catch (error) {
+      setIssueDeleteError(
+        getApiActionErrorMessage(error, "No s'ha pogut eliminar la issue.")
+      );
+    } finally {
+      setIssueDeleteLoading(false);
+    }
+  }
+
+  async function handleAttachmentFileChange(event) {
+    setAttachmentUploadError("");
+    const prepared = prepareIssueAttachmentUpload(event);
+    if (prepared.kind === "noop") return;
+    if (prepared.kind === "invalid") {
+      setAttachmentUploadError(prepared.message);
+      return;
+    }
+
+    setAttachmentUploadLoading(true);
+    try {
+      await createIssueAttachmentAndReload(prepared.file, {
+        apiKey: currentUser.apiKey,
+        issueId,
+        reloadAttachments: attachmentsState.reload,
+        reloadActivities: activitiesState.reload,
+      });
+    } catch (error) {
+      setAttachmentUploadError(
+        getApiActionErrorMessage(error, "No s'ha pogut pujar el fitxer.")
+      );
+    } finally {
+      setAttachmentUploadLoading(false);
+    }
   }
 
   function isCommentOwner(comment) {
     return comment.created_by?.username === currentUser.username;
+  }
+
+  function isIssueCreator(issue) {
+    return issue.created_by?.username === currentUser.username;
   }
 
   function startEditingComment(comment) {
@@ -86,10 +143,10 @@ export function IssueDetailPage() {
     try {
       await updateIssueComment(currentUser.apiKey, commentId, content);
       cancelEditingComment();
-      await commentsState.reload();
+      await Promise.all([commentsState.reload(), activitiesState.reload()]);
     } catch (error) {
       setCommentActionError(
-        getActionErrorMessage(error, "No s'ha pogut guardar el comentari.")
+        getApiActionErrorMessage(error, "No s'ha pogut guardar el comentari.")
       );
     } finally {
       setCommentActionLoading(false);
@@ -105,10 +162,10 @@ export function IssueDetailPage() {
     try {
       await deleteIssueComment(currentUser.apiKey, commentId);
       if (String(editingCommentId) === String(commentId)) cancelEditingComment();
-      await commentsState.reload();
+      await Promise.all([commentsState.reload(), activitiesState.reload()]);
     } catch (error) {
       setCommentActionError(
-        getActionErrorMessage(error, "No s'ha pogut eliminar el comentari.")
+        getApiActionErrorMessage(error, "No s'ha pogut eliminar el comentari.")
       );
     } finally {
       setCommentActionLoading(false);
@@ -120,11 +177,7 @@ export function IssueDetailPage() {
 
     if (user.avatar) {
       return (
-        <img
-          className="avatar avatar--sm"
-          src={user.avatar}
-          alt={`Avatar de ${user.username}`}
-        />
+        <img className="avatar avatar--sm" src={user.avatar} alt={`Avatar de ${user.username}`} />
       );
     }
 
@@ -207,25 +260,15 @@ export function IssueDetailPage() {
     );
   }
 
-  function getActivityUser(item) {
-    return item.actor ?? item.user ?? item.created_by ?? null;
-  }
-
   function renderActivityItem(item) {
-    const author = getActivityUser(item);
+    const author = getActivityActor(item);
     const authorName = author ? author.full_name ?? author.username : "Sistema";
 
     return (
       <article key={item.id} className="comment-item activity-item">
         <header className="comment-item__header">
           <div className="comment-item__author">
-            {author ? (
-              renderUserAvatar(author)
-            ) : (
-              <div className="avatar avatar--sm" aria-hidden="true">
-                S
-              </div>
-            )}
+            {renderUserAvatar(author)}
             <strong>{authorName}</strong>
           </div>
           <div className="comment-item__meta">
@@ -251,9 +294,10 @@ export function IssueDetailPage() {
   }
 
   const issue = issueState.data;
-  const attachments = issue.attachments ?? [];
-  const comments = commentsState.data?.results ?? [];
-  const activities = activitiesState.data?.results ?? [];
+
+  const attachmentItems = normalizeAttachmentList(attachmentsState.data);
+  const comments = normalizePagedList(commentsState.data);
+  const activities = normalizePagedList(activitiesState.data);
 
   function mainBox() {
     const creator = issue.created_by;
@@ -269,17 +313,7 @@ export function IssueDetailPage() {
             <h1 className="main-box__title">{issue.title}</h1>
           </div>
           <div className="main-box__creator">
-            {creator.avatar ? (
-              <img
-                className="avatar avatar--sm"
-                src={creator.avatar}
-                alt={`Avatar de ${creator.username}`}
-              />
-            ) : (
-              <div className="avatar avatar--sm" aria-hidden="true">
-                {creatorInitials}
-              </div>
-            )}
+            {renderUserAvatar(creator)}
             <div>
               <span className="main-box__creator-name">@{creator.username}</span>
               <time className="main-box__creator-date" dateTime={createdAt}>
@@ -298,12 +332,15 @@ export function IssueDetailPage() {
       <section className="panel issue-detail-attachments-panel">
         <h2>Attachments</h2>
         <p>
-          Allowed formats: PDF, images, TXT, MD, CSV, JSON, ZIP, DOC, DOCX, XLS, XLSX, PPT and PPTX.
-          Max size: 10 MB.
+          {ATTACHMENT_HELP_FORMATS} {ATTACHMENT_HELP_MAX_SIZE}
         </p>
         <div className="attachment-list">
-          {attachments.length > 0 ? (
-            attachments.map((attachment) => (
+          {attachmentsState.loading ? (
+            <p className="muted">Carregant adjunts…</p>
+          ) : attachmentsState.error ? (
+            <p className="form-error">{attachmentsState.error.message}</p>
+          ) : attachmentItems.length > 0 ? (
+            attachmentItems.map((attachment) => (
               <article className="attachment-item" key={attachment.id}>
                 {attachment.file_name}
               </article>
@@ -312,8 +349,24 @@ export function IssueDetailPage() {
             <p className="muted">No hi ha fitxers adjunts.</p>
           )}
         </div>
-        <button className="button button-primary" type="button">
-          Upload
+        <input
+          ref={attachmentFileInputRef}
+          type="file"
+          className="issue-detail-attachment-file-input"
+          accept={ATTACHMENT_ACCEPT}
+          aria-label="Seleccionar fitxer per pujar"
+          onChange={(e) => void handleAttachmentFileChange(e)}
+        />
+        {attachmentUploadError ? (
+          <p className="form-error issue-detail-attachment-upload-error">{attachmentUploadError}</p>
+        ) : null}
+        <button
+          className="button button-primary"
+          type="button"
+          disabled={attachmentUploadLoading}
+          onClick={() => attachmentFileInputRef.current?.click()}
+        >
+          {attachmentUploadLoading ? "Pujant…" : "Upload"}
         </button>
       </section>
     );
@@ -360,8 +413,12 @@ export function IssueDetailPage() {
               <p className="form-error comment-action-error">{commentActionError}</p>
             ) : null}
             <div className="comment-list">
-              {comments.length > 0 ? (
-                comments.map((item) => renderCommentItem(item)) //prepara la box de cada comentari, amb els botons si calen
+              {commentsState.loading ? (
+                <p className="muted">Carregant comentaris…</p>
+              ) : commentsState.error ? (
+                <p className="form-error">{commentsState.error.message}</p>
+              ) : comments.length > 0 ? (
+                comments.map((item) => renderCommentItem(item))
               ) : (
                 <p className="muted">Encara no hi ha comentaris.</p>
               )}
@@ -371,7 +428,11 @@ export function IssueDetailPage() {
           <div className="discussion-panel" role="tabpanel">
             <br />
             <div className="comment-list">
-              {activities.length > 0 ? (
+              {activitiesState.loading ? (
+                <p className="muted">Carregant activitats…</p>
+              ) : activitiesState.error ? (
+                <p className="form-error">{activitiesState.error.message}</p>
+              ) : activities.length > 0 ? (
                 activities.map((item) => renderActivityItem(item))
               ) : (
                 <p className="muted">Encara no hi ha activitat.</p>
@@ -390,6 +451,28 @@ export function IssueDetailPage() {
         {/* Assigned section */}
         {/* Watchers section */}
         {/* Buttons section */}
+        {isIssueCreator(issue) ? (
+          <>
+            <div className="issue-detail-lateral-actions">
+              <button
+                className="button button-primary"
+                type="button"
+                onClick={() => navigate(`/issues/${issueId}/edit`)}
+              >
+                Edit Issue
+              </button>
+              <button
+                className="button button-danger"
+                type="button"
+                disabled={issueDeleteLoading}
+                onClick={() => void handleDeleteIssue()}
+              >
+                {issueDeleteLoading ? "Eliminant…" : "Delete Issue"}
+              </button>
+            </div>
+            {issueDeleteError ? <p className="form-error">{issueDeleteError}</p> : null}
+          </>
+        ) : null}
       </section>
     );
   }
