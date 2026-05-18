@@ -114,6 +114,10 @@ export function IssueDetailPage() {
     return comment.created_by?.username === currentUser.username;
   }
 
+  function isIssueCreator(issue) {
+    return issue.created_by?.username === currentUser.username;
+  }
+
   function startEditingComment(comment) {
     setCommentActionError("");
     setEditingCommentId(comment.id);
@@ -447,24 +451,28 @@ export function IssueDetailPage() {
         {/* Assigned section */}
         {/* Watchers section */}
         {/* Buttons section */}
-        <div className="issue-detail-lateral-actions">
-          <button
-            className="button button-primary"
-            type="button"
-            onClick={() => navigate(`/issues/${issueId}/edit`)}
-          >
-            Edit Issue
-          </button>
-          <button
-            className="button button-danger"
-            type="button"
-            disabled={issueDeleteLoading}
-            onClick={() => void handleDeleteIssue()}
-          >
-            {issueDeleteLoading ? "Eliminant…" : "Delete Issue"}
-          </button>
-        </div>
-        {issueDeleteError ? <p className="form-error">{issueDeleteError}</p> : null}
+        {isIssueCreator(issue) ? (
+          <>
+            <div className="issue-detail-lateral-actions">
+              <button
+                className="button button-primary"
+                type="button"
+                onClick={() => navigate(`/issues/${issueId}/edit`)}
+              >
+                Edit Issue
+              </button>
+              <button
+                className="button button-danger"
+                type="button"
+                disabled={issueDeleteLoading}
+                onClick={() => void handleDeleteIssue()}
+              >
+                {issueDeleteLoading ? "Eliminant…" : "Delete Issue"}
+              </button>
+            </div>
+            {issueDeleteError ? <p className="form-error">{issueDeleteError}</p> : null}
+          </>
+        ) : null}
       </section>
     );
   }
