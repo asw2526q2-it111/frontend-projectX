@@ -5,6 +5,9 @@ import { useCurrentUser } from "../context/currentUser";
 
 function getErrorMessage(error) {
   if (error?.details?.detail) return String(error.details.detail);
+  if (Array.isArray(error?.details?.text) && error.details.text[0]) {
+    return String(error.details.text[0]);
+  }
   if (error instanceof Error && error.message) return error.message;
   return "Could not create issues.";
 }
@@ -23,15 +26,15 @@ export function BulkInsertPage() {
     setError("");
 
     try {
-        await bulkCreateIssues(currentUser.apiKey, {
-        titles,
-        });
+      await bulkCreateIssues(currentUser.apiKey, {
+        text: titles,
+      });
 
-        navigate("/issues");
+      navigate("/issues");
     } catch (submitError) {
-        setError(getErrorMessage(submitError));
+      setError(getErrorMessage(submitError));
     } finally {
-        setSaving(false);
+      setSaving(false);
     }
   }
 
