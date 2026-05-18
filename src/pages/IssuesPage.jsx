@@ -363,9 +363,9 @@ export function IssuesPage() {
               <Link className="button button-primary btn-full-center" to="/issues/new">
                 + New issue
               </Link>
-              <button className="button btn-bulk btn-full-center" type="button" onClick={() => void reload()}>
-                + Reload list
-              </button>
+              <Link className="button btn-bulk btn-full-center" to="/bulk-insert">
+                Bulk insert
+              </Link>
             </div>
           </section>
 
