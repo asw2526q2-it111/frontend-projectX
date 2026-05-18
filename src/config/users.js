@@ -14,4 +14,9 @@ export const FRONTEND_USERS = [
     fullName: "Victor Rocha",
     apiKey: "236348dafc7469a5b225da8d801119ce2d524e909e78a021d9eac6b8636b3909",
   },
+  {
+    username: "paulamaspascual-tech",
+    fullName: "Paula Mas",
+    apiKey: "5eb5ed95399b83ed978fb26263825f9d1c6f78a37e45d12b0774db59f97a502c",
+  }
 ];
