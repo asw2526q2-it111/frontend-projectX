@@ -836,6 +836,8 @@ img.avatar.avatar--sm {
 .issue-workspace .sidebar,
 .issue-workspace .right-panel {
   position: static;
+  display: grid;
+  gap: 16px;
   height: auto;
   padding: 0;
   color: inherit;
