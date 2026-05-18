@@ -14,9 +14,12 @@ export default function App() {
       <Route path="/issues/new" element={<IssueCreatePage />} />
       <Route path="/issues/:issueId" element={<IssueDetailPage />} />
       <Route path="/bulk-insert" element={<BulkInsertPage />} />
+      
+      
+      <Route path="/profile/:username" element={<ProfilePage />} />
+
       <Route element={<AppLayout />}>
         <Route index element={<Navigate to="/issues" replace />} />
-        <Route path="/profile/:username" element={<ProfilePage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
