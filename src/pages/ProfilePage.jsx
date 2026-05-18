@@ -1,15 +1,18 @@
 import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { getUser } from "../api/users";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingState } from "../components/LoadingState";
 import { useCurrentUser } from "../context/currentUser";
 import { useAsync } from "../hooks/useAsync";
+import { FRONTEND_USERS } from "../config/users"; 
+import { UserSwitcher } from "../components/UserSwitcher"; 
 import "../styles/profile.css";
 
 export function ProfilePage() {
   const { username } = useParams();
   const { currentUser } = useCurrentUser();
+  const navigate = useNavigate();
   const isOwnProfile = currentUser?.username === username;
   const [activeTab, setActiveTab] = useState("assigned");
 
@@ -32,6 +35,12 @@ export function ProfilePage() {
   }
 
   const user = userState.data;
+  const handleUserChange = (e) => {
+    const selectedUsername = e.target.value;
+    if (selectedUsername) {
+      navigate(`/profile/${selectedUsername}`);
+    }
+  };
 
   return (
     <div className="profile-page-wrapper">
@@ -43,7 +52,11 @@ export function ProfilePage() {
             <p style={{ margin: 0, color: '#617487', fontSize: '0.9rem' }}>User Profile</p>
           </div>
         </div>
-        <div className="topbar-actions">
+        
+        <div className="topbar-actions" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          
+          <UserSwitcher />
+          
           <Link className="btn btn-secondary" to="/issues" style={{ padding: '0.6rem 0.85rem', border: '1px solid #dde6ee', borderRadius: '0.7rem', textDecoration: 'none', color: '#1f2d3d', fontWeight: '600' }}>
             &larr; Back to issues
           </Link>
@@ -89,22 +102,12 @@ export function ProfilePage() {
               )}
             </div>
 
-            {isOwnProfile && (
-              <div className="api-key-section">
-                <h3 style={{ fontSize: "0.875rem", color: "#64748b", margin: "0 0 0.5rem", textTransform: "uppercase" }}>Your API Key</h3>
-                <p style={{ fontSize: "0.75rem", color: "#94a3b8", margin: "0 0 0.5rem" }}>Use this key to authenticate in Swagger.</p>
-                <div style={{ background: "#fff", border: "1px solid #cbd5e1", borderRadius: "4px", padding: "0.5rem" }}>
-                  <code style={{ fontSize: "0.8rem", color: "#0f172a", wordBreak: "break-all" }}>
-                    {user.api_key || currentUser?.apiKey}
-                  </code>
-                </div>
-              </div>
-            )}
+            
 
             {isOwnProfile && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '1.5rem' }}>
                 <button style={{ padding: '0.6rem', background: '#0d8aa8', color: 'white', border: 'none', borderRadius: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}>Edit Profile</button>
-                <button style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: 'bold', cursor: 'pointer', padding: '0.5rem' }}>SIGN OUT</button>
+                
               </div>
             )}
           </section>
