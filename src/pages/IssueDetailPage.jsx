@@ -8,8 +8,9 @@ import {
   createIssueComment,
   deleteIssueComment,
   getIssue,
-  listIssueActivities,
-  listIssueComments,
+  getIssueActivities,
+  getIssueAttachments,
+  getIssueComments,
   unassignMe,
   unwatchIssue,
   updateIssueComment,
@@ -34,11 +35,15 @@ export function IssueDetailPage() {
     currentUser.apiKey,
     issueId,
   ]);
-  const commentsState = useAsync(() => listIssueComments(currentUser.apiKey, issueId), [
+  const attachmentsState = useAsync(
+    () => getIssueAttachments(currentUser.apiKey, issueId),
+    [currentUser.apiKey, issueId]
+  );
+  const commentsState = useAsync(() => getIssueComments(currentUser.apiKey, issueId), [
     currentUser.apiKey,
     issueId,
   ]);
-  const activitiesState = useAsync(() => listIssueActivities(currentUser.apiKey, issueId), [
+  const activitiesState = useAsync(() => getIssueActivities(currentUser.apiKey, issueId), [
     currentUser.apiKey,
     issueId,
   ]);
@@ -48,7 +53,7 @@ export function IssueDetailPage() {
     if (!comment.trim()) return;
     await createIssueComment(currentUser.apiKey, issueId, comment.trim());
     setComment("");
-    await commentsState.reload();
+    await Promise.all([commentsState.reload(), activitiesState.reload()]);
   }
 
   function getActionErrorMessage(error, fallback) {
@@ -86,7 +91,7 @@ export function IssueDetailPage() {
     try {
       await updateIssueComment(currentUser.apiKey, commentId, content);
       cancelEditingComment();
-      await commentsState.reload();
+      await Promise.all([commentsState.reload(), activitiesState.reload()]);
     } catch (error) {
       setCommentActionError(
         getActionErrorMessage(error, "No s'ha pogut guardar el comentari.")
@@ -105,7 +110,7 @@ export function IssueDetailPage() {
     try {
       await deleteIssueComment(currentUser.apiKey, commentId);
       if (String(editingCommentId) === String(commentId)) cancelEditingComment();
-      await commentsState.reload();
+      await Promise.all([commentsState.reload(), activitiesState.reload()]);
     } catch (error) {
       setCommentActionError(
         getActionErrorMessage(error, "No s'ha pogut eliminar el comentari.")
@@ -241,9 +246,17 @@ export function IssueDetailPage() {
   }
 
   const issue = issueState.data;
-  const attachments = issue.attachments ?? [];
-  const comments = commentsState.data?.results ?? [];
-  const activities = activitiesState.data?.results ?? [];
+
+  function asList(payload) {
+    if (!payload) return [];
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload.results)) return payload.results;
+    return [];
+  }
+
+  const attachmentItems = asList(attachmentsState.data);
+  const comments = asList(commentsState.data);
+  const activities = asList(activitiesState.data);
 
   function mainBox() {
     const creator = issue.created_by;
@@ -282,8 +295,12 @@ export function IssueDetailPage() {
           Max size: 10 MB.
         </p>
         <div className="attachment-list">
-          {attachments.length > 0 ? (
-            attachments.map((attachment) => (
+          {attachmentsState.loading ? (
+            <p className="muted">Carregant adjunts…</p>
+          ) : attachmentsState.error ? (
+            <p className="form-error">{attachmentsState.error.message}</p>
+          ) : attachmentItems.length > 0 ? (
+            attachmentItems.map((attachment) => (
               <article className="attachment-item" key={attachment.id}>
                 {attachment.file_name}
               </article>
@@ -340,8 +357,12 @@ export function IssueDetailPage() {
               <p className="form-error comment-action-error">{commentActionError}</p>
             ) : null}
             <div className="comment-list">
-              {comments.length > 0 ? (
-                comments.map((item) => renderCommentItem(item)) //prepara la box de cada comentari, amb els botons si calen
+              {commentsState.loading ? (
+                <p className="muted">Carregant comentaris…</p>
+              ) : commentsState.error ? (
+                <p className="form-error">{commentsState.error.message}</p>
+              ) : comments.length > 0 ? (
+                comments.map((item) => renderCommentItem(item))
               ) : (
                 <p className="muted">Encara no hi ha comentaris.</p>
               )}
@@ -351,7 +372,11 @@ export function IssueDetailPage() {
           <div className="discussion-panel" role="tabpanel">
             <br />
             <div className="comment-list">
-              {activities.length > 0 ? (
+              {activitiesState.loading ? (
+                <p className="muted">Carregant activitats…</p>
+              ) : activitiesState.error ? (
+                <p className="form-error">{activitiesState.error.message}</p>
+              ) : activities.length > 0 ? (
                 activities.map((item) => renderActivityItem(item))
               ) : (
                 <p className="muted">Encara no hi ha activitat.</p>

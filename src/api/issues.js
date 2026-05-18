@@ -100,10 +100,18 @@ export function deleteIssueComment(apiKey, commentId) {
   });
 }
 
-export function listIssueActivities(apiKey, issueId) {
+export function getIssueActivities(apiKey, issueId) {
   return apiRequest(`/api/issues/${issueId}/activities/`, { apiKey });
 }
 
 export function getUserAvatar(apiKey, username) {
   return apiRequest(`/api/users/${username}/avatar/`, { apiKey });
+}
+
+export function getIssueAttachments(apiKey, issueId) {
+  return apiRequest(`/api/issues/${issueId}/attachments/`, { apiKey });
+}
+
+export function getIssueComments(apiKey, issueId) {
+  return apiRequest(`/api/issues/${issueId}/comments/`, { apiKey });
 }
