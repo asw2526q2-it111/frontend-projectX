@@ -1,19 +1,16 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { getUser } from "../api/users";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingState } from "../components/LoadingState";
 import { useCurrentUser } from "../context/currentUser";
 import { useAsync } from "../hooks/useAsync";
+import "../styles/profile.css";
 
 export function ProfilePage() {
   const { username } = useParams();
   const { currentUser } = useCurrentUser();
-
-  // LA REGLA D'OR (Amb interrogant de seguretat ?.)
   const isOwnProfile = currentUser?.username === username;
-
-  // ESTAT DE LES PESTANYES
   const [activeTab, setActiveTab] = useState("assigned");
 
   const userState = useAsync(() => getUser(currentUser?.apiKey, username), [
@@ -21,9 +18,7 @@ export function ProfilePage() {
     username,
   ]);
 
-  if (!isOwnProfile && activeTab === "watched") {
-    setActiveTab("assigned");
-  }
+  if (!isOwnProfile && activeTab === "watched") setActiveTab("assigned");
 
   if (userState.loading) return <LoadingState />;
 
@@ -39,92 +34,118 @@ export function ProfilePage() {
   const user = userState.data;
 
   return (
-    <section className="page-stack">
-      
-      {/* HEADER DE L'USUARI (Fa servir l'estètica original) */}
-      <div className="profile-header">
-        <div className="avatar">
-           {user.avatar_url ? (
-            <img src={user.avatar_url} alt="Avatar" style={{width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover'}}/>
-           ) : (
-            user.initials
-           )}
+    <div className="profile-page-wrapper">
+      <header className="profile-topbar">
+        <div className="brand" style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+          <div className="brand-mark" style={{ width: '2.3rem', height: '2.3rem', borderRadius: '0.6rem', background: 'linear-gradient(145deg, #0d8aa8, #23a5c6)', color: 'white', display: 'grid', placeItems: 'center', fontWeight: 'bold' }}>IX</div>
+          <div>
+            <h1 style={{ margin: 0, fontSize: '1.25rem' }}>Issue Hub</h1>
+            <p style={{ margin: 0, color: '#617487', fontSize: '0.9rem' }}>User Profile</p>
+          </div>
         </div>
-        <div>
-          <span className="eyebrow">@{user.username}</span>
-          <h2>{user.full_name}</h2>
-          <p>{user.bio ?? "Aquest usuari encara no té biografia."}</p>
-          
-          {/* AC6: Botó EDIT BIO només pel propietari */}
-          {isOwnProfile && (
-            <button className="btn-primary" style={{ marginTop: "10px" }}>
-              EDIT BIO
-            </button>
-          )}
+        <div className="topbar-actions">
+          <Link className="btn btn-secondary" to="/issues" style={{ padding: '0.6rem 0.85rem', border: '1px solid #dde6ee', borderRadius: '0.7rem', textDecoration: 'none', color: '#1f2d3d', fontWeight: '600' }}>
+            &larr; Back to issues
+          </Link>
         </div>
-      </div>
+      </header>
 
-      {/* ESTADÍSTIQUES */}
-      <div className="stats-grid">
-        <div className="stat">
-          <span>Assignades</span>
-          <strong>{user.assigned_count}</strong>
-        </div>
-        <div className="stat">
-          <span>Seguides</span>
-          <strong>{user.watched_count}</strong>
-        </div>
-        <div className="stat">
-          <span>Comentaris</span>
-          <strong>{user.comments_count}</strong>
-        </div>
-      </div>
+      <main className="profile-layout">
+        <aside className="profile-sidebar">
+          <section className="profile-sidebar-panel">
+            <div className="profile-avatar-large">
+              {user.avatar_url ? (
+                <img src={user.avatar_url} alt={`${user.username} avatar`} />
+              ) : (
+                user.initials
+              )}
+            </div>
+            
+            <h2 className="profile-name">{user.full_name || user.username}</h2>
+            <p className="profile-username">@{user.username}</p>
 
-      {/* PESTANYES NAVEGABLES */}
-      <div style={{ display: "flex", gap: "1rem", borderBottom: "1px solid #ccc", marginBottom: "1rem" }}>
-        <button 
-          style={{ padding: "0.5rem 1rem", border: "none", background: "none", borderBottom: activeTab === "assigned" ? "2px solid #0ea5e9" : "2px solid transparent", cursor: "pointer", fontWeight: activeTab === "assigned" ? "bold" : "normal" }}
-          onClick={() => setActiveTab("assigned")}
-        >
-          Open Assigned Issues
-        </button>
+            <div className={`profile-stats-grid ${isOwnProfile ? 'profile-stats-grid--three' : 'profile-stats-grid--two'}`}>
+              <div>
+                <span className="stat-num">{user.assigned_count}</span>
+                <span className="stat-label">Assigned</span>
+              </div>
+              {isOwnProfile && (
+                <div>
+                  <span className="stat-num">{user.watched_count}</span>
+                  <span className="stat-label">Watched</span>
+                </div>
+              )}
+              <div>
+                <span className="stat-num">{user.comments_count}</span>
+                <span className="stat-label">Comments</span>
+              </div>
+            </div>
 
-        {isOwnProfile && (
-          <button 
-            style={{ padding: "0.5rem 1rem", border: "none", background: "none", borderBottom: activeTab === "watched" ? "2px solid #0ea5e9" : "2px solid transparent", cursor: "pointer", fontWeight: activeTab === "watched" ? "bold" : "normal" }}
-            onClick={() => setActiveTab("watched")}
-          >
-            Watched Issues
-          </button>
-        )}
+            <div className="bio-section">
+              {user.bio ? (
+                <p style={{ whiteSpace: "pre-wrap" }}>{user.bio}</p>
+              ) : (
+                <span style={{ color: "#94a3b8", fontStyle: "italic" }}>No bio available.</span>
+              )}
+            </div>
 
-        <button 
-          style={{ padding: "0.5rem 1rem", border: "none", background: "none", borderBottom: activeTab === "comments" ? "2px solid #0ea5e9" : "2px solid transparent", cursor: "pointer", fontWeight: activeTab === "comments" ? "bold" : "normal" }}
-          onClick={() => setActiveTab("comments")}
-        >
-          Comments
-        </button>
-      </div>
+            {isOwnProfile && (
+              <div className="api-key-section">
+                <h3 style={{ fontSize: "0.875rem", color: "#64748b", margin: "0 0 0.5rem", textTransform: "uppercase" }}>Your API Key</h3>
+                <p style={{ fontSize: "0.75rem", color: "#94a3b8", margin: "0 0 0.5rem" }}>Use this key to authenticate in Swagger.</p>
+                <div style={{ background: "#fff", border: "1px solid #cbd5e1", borderRadius: "4px", padding: "0.5rem" }}>
+                  <code style={{ fontSize: "0.8rem", color: "#0f172a", wordBreak: "break-all" }}>
+                    {user.api_key || currentUser?.apiKey}
+                  </code>
+                </div>
+              </div>
+            )}
 
-      {/* CONTINGUT DE LA PESTANYA */}
-      <section>
-        {activeTab === "assigned" && (
-           <div className="issue-list">
-             [Aquí pintarem l'IssueCard amb la lògica d'ordenació]
-           </div>
-        )}
-        
-        {activeTab === "watched" && (
-           <div className="issue-list">
-             [Aquí pintarem l'IssueCard amb la lògica d'ordenació]
-           </div>
-        )}
+            {isOwnProfile && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '1.5rem' }}>
+                <button style={{ padding: '0.6rem', background: '#0d8aa8', color: 'white', border: 'none', borderRadius: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}>Edit Profile</button>
+                <button style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: 'bold', cursor: 'pointer', padding: '0.5rem' }}>SIGN OUT</button>
+              </div>
+            )}
+          </section>
+        </aside>
 
-        {activeTab === "comments" && (
-           <div>[Llista de Comentaris amb botons d'edició]</div>
-        )}
-      </section>
+        <section className="profile-content">
+          <div className="tabs-header">
+            <div className={`tab-item ${activeTab === 'assigned' ? 'active' : ''}`} onClick={() => setActiveTab('assigned')}>
+              Open Assigned Issues
+            </div>
+            {isOwnProfile && (
+              <div className={`tab-item ${activeTab === 'watched' ? 'active' : ''}`} onClick={() => setActiveTab('watched')}>
+                Watched Issues
+              </div>
+            )}
+            <div className={`tab-item ${activeTab === 'comments' ? 'active' : ''}`} onClick={() => setActiveTab('comments')}>
+              Comments
+            </div>
+          </div>
 
-    </section>
+          <div className="profile-content-body">
+            {activeTab === "assigned" && (
+              <div className="issues-table-wrap">
+                [Aquí pintarem la taula per a ASSIGNADES]
+              </div>
+            )}
+            
+            {activeTab === "watched" && (
+              <div className="issues-table-wrap">
+                [Aquí pintarem la taula per a SEGUIDES]
+              </div>
+            )}
+
+            {activeTab === "comments" && (
+              <div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>
+                No comments yet.
+              </div>
+            )}
+          </div>
+        </section>
+      </main>
+    </div>
   );
 }
