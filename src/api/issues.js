@@ -30,6 +30,14 @@ export function createIssue(apiKey, payload) {
   });
 }
 
+export function bulkCreateIssues(apiKey, payload) {
+  return apiRequest("/api/issues/bulk/", {
+    apiKey,
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export function updateIssue(apiKey, issueId, payload) {
   return apiRequest(`/api/issues/${issueId}/`, {
     apiKey,

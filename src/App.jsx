@@ -5,6 +5,7 @@ import { IssueDetailPage } from "./pages/IssueDetailPage";
 import { IssuesPage } from "./pages/IssuesPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { ProfilePage } from "./pages/ProfilePage";
+import { BulkInsertPage } from "./pages/BulkInsertPage";
 
 export default function App() {
   return (
@@ -12,6 +13,7 @@ export default function App() {
       <Route path="/issues" element={<IssuesPage />} />
       <Route path="/issues/new" element={<IssueCreatePage />} />
       <Route path="/issues/:issueId" element={<IssueDetailPage />} />
+      <Route path="/bulk-insert" element={<BulkInsertPage />} />
       <Route element={<AppLayout />}>
         <Route index element={<Navigate to="/issues" replace />} />
         <Route path="/profile/:username" element={<ProfilePage />} />
