@@ -7,6 +7,7 @@ import { useCurrentUser } from "../context/currentUser";
 import { useAsync } from "../hooks/useAsync";
 import { FRONTEND_USERS } from "../config/users"; 
 import { UserSwitcher } from "../components/UserSwitcher"; 
+import { ProfileIssuesTable } from "../components/ProfileIssuesTable";
 import "../styles/profile.css";
 
 export function ProfilePage() {
@@ -35,12 +36,6 @@ export function ProfilePage() {
   }
 
   const user = userState.data;
-  const handleUserChange = (e) => {
-    const selectedUsername = e.target.value;
-    if (selectedUsername) {
-      navigate(`/profile/${selectedUsername}`);
-    }
-  };
 
   return (
     <div className="profile-page-wrapper">
@@ -102,12 +97,9 @@ export function ProfilePage() {
               )}
             </div>
 
-            
-
             {isOwnProfile && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '1.5rem' }}>
                 <button style={{ padding: '0.6rem', background: '#0d8aa8', color: 'white', border: 'none', borderRadius: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}>Edit Profile</button>
-                
               </div>
             )}
           </section>
@@ -131,13 +123,13 @@ export function ProfilePage() {
           <div className="profile-content-body">
             {activeTab === "assigned" && (
               <div className="issues-table-wrap">
-                [Aquí pintarem la taula per a ASSIGNADES]
+                <ProfileIssuesTable username={username} type="assigned" />
               </div>
             )}
             
             {activeTab === "watched" && (
               <div className="issues-table-wrap">
-                [Aquí pintarem la taula per a SEGUIDES]
+                <ProfileIssuesTable username={username} type="watched" />
               </div>
             )}
 
