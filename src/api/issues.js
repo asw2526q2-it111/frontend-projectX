@@ -73,10 +73,6 @@ export function unwatchIssue(apiKey, issueId) {
   });
 }
 
-export function listIssueComments(apiKey, issueId) {
-  return apiRequest(`/api/issues/${issueId}/comments/`, { apiKey });
-}
-
 export function createIssueComment(apiKey, issueId, content) {
   return apiRequest(`/api/issues/${issueId}/comments/`, {
     apiKey,
@@ -110,6 +106,16 @@ export function getUserAvatar(apiKey, username) {
 
 export function getIssueAttachments(apiKey, issueId) {
   return apiRequest(`/api/issues/${issueId}/attachments/`, { apiKey });
+}
+
+export function createIssueAttachment(apiKey, issueId, file) {
+  const body = new FormData();
+  body.append("file", file);
+  return apiRequest(`/api/issues/${issueId}/attachments/`, {
+    apiKey,
+    method: "POST",
+    body,
+  });
 }
 
 export function getIssueComments(apiKey, issueId) {

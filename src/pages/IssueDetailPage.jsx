@@ -1,28 +1,35 @@
-import { Eye, UserCheck, UserMinus } from "lucide-react";
-import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useRef, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { LoadingState } from "../components/LoadingState";
-import { StatusPill } from "../components/StatusPill";
 import {
-  assignMe,
   createIssueComment,
+  deleteIssue,
   deleteIssueComment,
   getIssue,
   getIssueActivities,
   getIssueAttachments,
   getIssueComments,
-  unassignMe,
-  unwatchIssue,
   updateIssueComment,
-  watchIssue,
 } from "../api/issues";
 import { EmptyState } from "../components/EmptyState";
 import { useCurrentUser } from "../context/currentUser";
 import { useAsync } from "../hooks/useAsync";
+import { getApiActionErrorMessage } from "../utils/apiError";
+import { normalizePagedList } from "../utils/apiList";
+import { getActivityActor } from "../utils/activities";
+import {
+  ATTACHMENT_ACCEPT,
+  ATTACHMENT_HELP_FORMATS,
+  ATTACHMENT_HELP_MAX_SIZE,
+  createIssueAttachmentAndReload,
+  normalizeAttachmentList,
+  prepareIssueAttachmentUpload,
+} from "../utils/attachments";
 import { formatDate, initials } from "../utils/format";
 
 export function IssueDetailPage() {
   const { issueId } = useParams();
+  const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
   const [comment, setComment] = useState("");
   const [editingCommentId, setEditingCommentId] = useState(null);
@@ -30,6 +37,11 @@ export function IssueDetailPage() {
   const [commentActionError, setCommentActionError] = useState("");
   const [commentActionLoading, setCommentActionLoading] = useState(false);
   const [discussionView, setDiscussionView] = useState("comments"); //Per saber quina pestanya s'esta mostrant a discussion box
+  const [attachmentUploadError, setAttachmentUploadError] = useState("");
+  const [attachmentUploadLoading, setAttachmentUploadLoading] = useState(false);
+  const [issueDeleteError, setIssueDeleteError] = useState("");
+  const [issueDeleteLoading, setIssueDeleteLoading] = useState(false);
+  const attachmentFileInputRef = useRef(null);
 
   const issueState = useAsync(() => getIssue(currentUser.apiKey, issueId), [
     currentUser.apiKey,
@@ -56,10 +68,46 @@ export function IssueDetailPage() {
     await Promise.all([commentsState.reload(), activitiesState.reload()]);
   }
 
-  function getActionErrorMessage(error, fallback) {
-    if (error?.details?.detail) return String(error.details.detail);
-    if (error instanceof Error && error.message) return error.message;
-    return fallback;
+  async function handleDeleteIssue() {
+    if (!window.confirm("Segur que vols eliminar aquesta issue?")) return;
+    setIssueDeleteError("");
+    setIssueDeleteLoading(true);
+    try {
+      await deleteIssue(currentUser.apiKey, issueId);
+      navigate("/issues");
+    } catch (error) {
+      setIssueDeleteError(
+        getApiActionErrorMessage(error, "No s'ha pogut eliminar la issue.")
+      );
+    } finally {
+      setIssueDeleteLoading(false);
+    }
+  }
+
+  async function handleAttachmentFileChange(event) {
+    setAttachmentUploadError("");
+    const prepared = prepareIssueAttachmentUpload(event);
+    if (prepared.kind === "noop") return;
+    if (prepared.kind === "invalid") {
+      setAttachmentUploadError(prepared.message);
+      return;
+    }
+
+    setAttachmentUploadLoading(true);
+    try {
+      await createIssueAttachmentAndReload(prepared.file, {
+        apiKey: currentUser.apiKey,
+        issueId,
+        reloadAttachments: attachmentsState.reload,
+        reloadActivities: activitiesState.reload,
+      });
+    } catch (error) {
+      setAttachmentUploadError(
+        getApiActionErrorMessage(error, "No s'ha pogut pujar el fitxer.")
+      );
+    } finally {
+      setAttachmentUploadLoading(false);
+    }
   }
 
   function isCommentOwner(comment) {
@@ -94,7 +142,7 @@ export function IssueDetailPage() {
       await Promise.all([commentsState.reload(), activitiesState.reload()]);
     } catch (error) {
       setCommentActionError(
-        getActionErrorMessage(error, "No s'ha pogut guardar el comentari.")
+        getApiActionErrorMessage(error, "No s'ha pogut guardar el comentari.")
       );
     } finally {
       setCommentActionLoading(false);
@@ -113,7 +161,7 @@ export function IssueDetailPage() {
       await Promise.all([commentsState.reload(), activitiesState.reload()]);
     } catch (error) {
       setCommentActionError(
-        getActionErrorMessage(error, "No s'ha pogut eliminar el comentari.")
+        getApiActionErrorMessage(error, "No s'ha pogut eliminar el comentari.")
       );
     } finally {
       setCommentActionLoading(false);
@@ -208,12 +256,8 @@ export function IssueDetailPage() {
     );
   }
 
-  function getActivityUser(item) {
-    return item.actor ?? item.user ?? item.created_by ?? null;
-  }
-
   function renderActivityItem(item) {
-    const author = getActivityUser(item);
+    const author = getActivityActor(item);
     const authorName = author ? author.full_name ?? author.username : "Sistema";
 
     return (
@@ -247,16 +291,9 @@ export function IssueDetailPage() {
 
   const issue = issueState.data;
 
-  function asList(payload) {
-    if (!payload) return [];
-    if (Array.isArray(payload)) return payload;
-    if (Array.isArray(payload.results)) return payload.results;
-    return [];
-  }
-
-  const attachmentItems = asList(attachmentsState.data);
-  const comments = asList(commentsState.data);
-  const activities = asList(activitiesState.data);
+  const attachmentItems = normalizeAttachmentList(attachmentsState.data);
+  const comments = normalizePagedList(commentsState.data);
+  const activities = normalizePagedList(activitiesState.data);
 
   function mainBox() {
     const creator = issue.created_by;
@@ -291,8 +328,7 @@ export function IssueDetailPage() {
       <section className="panel issue-detail-attachments-panel">
         <h2>Attachments</h2>
         <p>
-          Allowed formats: PDF, images, TXT, MD, CSV, JSON, ZIP, DOC, DOCX, XLS, XLSX, PPT and PPTX.
-          Max size: 10 MB.
+          {ATTACHMENT_HELP_FORMATS} {ATTACHMENT_HELP_MAX_SIZE}
         </p>
         <div className="attachment-list">
           {attachmentsState.loading ? (
@@ -309,8 +345,24 @@ export function IssueDetailPage() {
             <p className="muted">No hi ha fitxers adjunts.</p>
           )}
         </div>
-        <button className="button button-primary" type="button">
-          Upload
+        <input
+          ref={attachmentFileInputRef}
+          type="file"
+          className="issue-detail-attachment-file-input"
+          accept={ATTACHMENT_ACCEPT}
+          aria-label="Seleccionar fitxer per pujar"
+          onChange={(e) => void handleAttachmentFileChange(e)}
+        />
+        {attachmentUploadError ? (
+          <p className="form-error issue-detail-attachment-upload-error">{attachmentUploadError}</p>
+        ) : null}
+        <button
+          className="button button-primary"
+          type="button"
+          disabled={attachmentUploadLoading}
+          onClick={() => attachmentFileInputRef.current?.click()}
+        >
+          {attachmentUploadLoading ? "Pujant…" : "Upload"}
         </button>
       </section>
     );
@@ -395,6 +447,24 @@ export function IssueDetailPage() {
         {/* Assigned section */}
         {/* Watchers section */}
         {/* Buttons section */}
+        <div className="issue-detail-lateral-actions">
+          <button
+            className="button button-primary"
+            type="button"
+            onClick={() => navigate(`/issues/${issueId}/edit`)}
+          >
+            Edit Issue
+          </button>
+          <button
+            className="button button-danger"
+            type="button"
+            disabled={issueDeleteLoading}
+            onClick={() => void handleDeleteIssue()}
+          >
+            {issueDeleteLoading ? "Eliminant…" : "Delete Issue"}
+          </button>
+        </div>
+        {issueDeleteError ? <p className="form-error">{issueDeleteError}</p> : null}
       </section>
     );
   }
