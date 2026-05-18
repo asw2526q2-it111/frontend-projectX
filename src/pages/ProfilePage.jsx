@@ -5,7 +5,7 @@ import { EmptyState } from "../components/EmptyState";
 import { LoadingState } from "../components/LoadingState";
 import { useCurrentUser } from "../context/currentUser";
 import { useAsync } from "../hooks/useAsync";
-import "../styles/Profile.css";
+import "../styles/profile.css";
 
 export function ProfilePage() {
   const { username } = useParams();
