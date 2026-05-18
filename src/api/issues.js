@@ -103,3 +103,7 @@ export function deleteIssueComment(apiKey, commentId) {
 export function listIssueActivities(apiKey, issueId) {
   return apiRequest(`/api/issues/${issueId}/activities/`, { apiKey });
 }
+
+export function getUserAvatar(apiKey, username) {
+  return apiRequest(`/api/users/${username}/avatar/`, { apiKey });
+}

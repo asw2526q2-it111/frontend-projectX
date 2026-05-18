@@ -120,11 +120,7 @@ export function IssueDetailPage() {
 
     if (user.avatar) {
       return (
-        <img
-          className="avatar avatar--sm"
-          src={user.avatar}
-          alt={`Avatar de ${user.username}`}
-        />
+        <img className="avatar avatar--sm" src={user.avatar} alt={`Avatar de ${user.username}`} />
       );
     }
 
@@ -219,13 +215,7 @@ export function IssueDetailPage() {
       <article key={item.id} className="comment-item activity-item">
         <header className="comment-item__header">
           <div className="comment-item__author">
-            {author ? (
-              renderUserAvatar(author)
-            ) : (
-              <div className="avatar avatar--sm" aria-hidden="true">
-                S
-              </div>
-            )}
+            {renderUserAvatar(author)}
             <strong>{authorName}</strong>
           </div>
           <div className="comment-item__meta">
@@ -269,17 +259,7 @@ export function IssueDetailPage() {
             <h1 className="main-box__title">{issue.title}</h1>
           </div>
           <div className="main-box__creator">
-            {creator.avatar ? (
-              <img
-                className="avatar avatar--sm"
-                src={creator.avatar}
-                alt={`Avatar de ${creator.username}`}
-              />
-            ) : (
-              <div className="avatar avatar--sm" aria-hidden="true">
-                {creatorInitials}
-              </div>
-            )}
+            {renderUserAvatar(creator)}
             <div>
               <span className="main-box__creator-name">@{creator.username}</span>
               <time className="main-box__creator-date" dateTime={createdAt}>
