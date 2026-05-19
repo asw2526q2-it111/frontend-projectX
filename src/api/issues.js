@@ -146,6 +146,13 @@ export function createIssueAttachment(apiKey, issueId, file) {
   });
 }
 
+export function deleteIssueAttachment(apiKey, attachmentId) {
+  return apiRequest(`/api/attachments/${attachmentId}/`, {
+    apiKey,
+    method: "DELETE",
+  });
+}
+
 export function getIssueComments(apiKey, issueId) {
   return apiRequest(`/api/issues/${issueId}/comments/`, { apiKey });
 }
