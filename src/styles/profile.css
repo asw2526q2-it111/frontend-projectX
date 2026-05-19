@@ -12,6 +12,30 @@
   padding: 1.25rem;
 }
 
+.profile-topbar .brand {
+  margin: 0;
+}
+
+.profile-topbar .brand-mark {
+  width: 37px;
+  height: 37px;
+  border-radius: 10px;
+  color: #ffffff;
+  background: linear-gradient(145deg, #0d8aa8, #23a5c6);
+  font-weight: 800;
+}
+
+.profile-topbar .brand h1 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.profile-topbar .brand p {
+  margin: 2px 0 0;
+  color: #617487;
+  font-size: 0.9rem;
+}
+
 .profile-layout {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
