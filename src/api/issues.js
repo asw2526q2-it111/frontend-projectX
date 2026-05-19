@@ -81,6 +81,26 @@ export function unwatchIssue(apiKey, issueId) {
   });
 }
 
+export function applyIssueAssignees(apiKey, issueId, assigneeUsername) {
+  return apiRequest(`/api/issues/${issueId}/assignees/apply/`, {
+    apiKey,
+    method: "POST",
+    body: JSON.stringify({
+      assignee_username: assigneeUsername || null,
+    }),
+  });
+}
+
+export function applyIssueWatchers(apiKey, issueId, watcherUsernames) {
+  return apiRequest(`/api/issues/${issueId}/watchers/apply/`, {
+    apiKey,
+    method: "POST",
+    body: JSON.stringify({
+      watcher_usernames: watcherUsernames,
+    }),
+  });
+}
+
 export function createIssueComment(apiKey, issueId, content) {
   return apiRequest(`/api/issues/${issueId}/comments/`, {
     apiKey,
@@ -118,7 +138,7 @@ export function getIssueAttachments(apiKey, issueId) {
 
 export function createIssueAttachment(apiKey, issueId, file) {
   const body = new FormData();
-  body.append("file", file);
+  body.append("attachment", file);
   return apiRequest(`/api/issues/${issueId}/attachments/`, {
     apiKey,
     method: "POST",
