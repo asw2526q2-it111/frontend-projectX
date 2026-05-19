@@ -63,7 +63,7 @@ export function assignMe(apiKey, issueId) {
 export function unassignMe(apiKey, issueId) {
   return apiRequest(`/api/issues/${issueId}/unassign-me/`, {
     apiKey,
-    method: "POST",
+    method: "DELETE",
   });
 }
 
@@ -77,7 +77,7 @@ export function watchIssue(apiKey, issueId) {
 export function unwatchIssue(apiKey, issueId) {
   return apiRequest(`/api/issues/${issueId}/unwatch/`, {
     apiKey,
-    method: "POST",
+    method: "DELETE",
   });
 }
 
