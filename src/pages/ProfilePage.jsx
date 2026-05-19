@@ -49,7 +49,6 @@ export function ProfilePage() {
         </div>
         
         <div className="topbar-actions" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          
           <UserSwitcher />
           
           <Link className="btn btn-secondary" to="/issues" style={{ padding: '0.6rem 0.85rem', border: '1px solid #dde6ee', borderRadius: '0.7rem', textDecoration: 'none', color: '#1f2d3d', fontWeight: '600' }}>
@@ -99,7 +98,12 @@ export function ProfilePage() {
 
             {isOwnProfile && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '1.5rem' }}>
-                <button style={{ padding: '0.6rem', background: '#0d8aa8', color: 'white', border: 'none', borderRadius: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}>Edit Profile</button>
+                {/* Envolvemos el botón con el Link hacia la ruta de edición */}
+                <Link to={`/profile/${username}/edit`} style={{ textDecoration: 'none' }}>
+                  <button style={{ width: '100%', padding: '0.6rem', background: '#0d8aa8', color: 'white', border: 'none', borderRadius: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}>
+                    Edit Profile
+                  </button>
+                </Link>
               </div>
             )}
           </section>
