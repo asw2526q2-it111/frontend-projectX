@@ -8,40 +8,7 @@ export function formatDate(value) {
   }).format(new Date(value));
 }
 
-export function formatDeadline(value) {
-  if (!value) return "-";
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(value));
-}
-
-/** Format compact per a la sidebar d'issue detail (evita dates massa llargues). */
-export function formatSidebarDeadline(value) {
-  if (!value) return "-";
-
-  return new Intl.DateTimeFormat("ca-ES", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(value));
-}
-
-export function formatDateTime(value) {
-  if (!value) return "-";
-
-  return new Intl.DateTimeFormat("ca-ES", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
-
-/** Format compact per a la sidebar d'issue detail (evita dates massa llargues). */
+/** Format compact per dates a la sidebar (issue detail, etc.). */
 export function formatSidebarDateTime(value) {
   if (!value) return "-";
 
