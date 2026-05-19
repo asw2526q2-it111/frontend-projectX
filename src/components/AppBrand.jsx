@@ -1,3 +1,8 @@
+/**
+ * Marca de l'app: logo «IX», títol «Issue Hub» i subtítol o tagline.
+ * variant «sidebar» per al menú lateral; «header» per topbars amb subtítol.
+ */
+
 export const APP_MARK = "IX";
 export const APP_TITLE = "Issue Hub";
 export const APP_TAGLINE = "ProjectX";
