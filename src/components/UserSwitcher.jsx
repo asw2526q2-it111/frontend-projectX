@@ -1,11 +1,11 @@
 import { useCurrentUser } from "../context/currentUser";
 
-export function UserSwitcher() {
+export function UserSwitcher({ label = "Active user" }) {
   const { users, currentUser, setCurrentUsername } = useCurrentUser();
 
   return (
     <label className="user-switcher">
-      <span>Active user</span>
+      <span>{label}</span>
       <select
         value={currentUser.username}
         onChange={(event) => setCurrentUsername(event.target.value)}

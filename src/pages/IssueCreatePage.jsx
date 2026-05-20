@@ -6,6 +6,7 @@ import { createLookup, listLookup } from "../api/lookups";
 import { listUsers } from "../api/users";
 import { useCurrentUser } from "../context/currentUser";
 import { initials } from "../utils/format";
+import { getUserDisplayName, getUserInitials } from "../utils/user";
 
 const LOOKUP_GROUPS = [
   { key: "status", resource: "statuses", label: "Status", color: "#0d8aa8" },
@@ -51,26 +52,18 @@ function getErrorMessage(error, fallback) {
   return fallback;
 }
 
-function getDisplayName(user) {
-  return user?.full_name || user?.fullName || user?.username || "User";
-}
-
-function getUserInitials(user) {
-  return user?.initials || initials(getDisplayName(user));
-}
-
 function normalizeIdentity(value) {
   return String(value ?? "").trim().toLowerCase();
 }
 
 function createCurrentUserFallback(currentUser) {
-  const fullName = currentUser?.fullName || currentUser?.username || "User";
+  const fullName = getUserDisplayName(currentUser) || "User";
 
   return {
     username: currentUser?.username || "",
     full_name: fullName,
     fullName,
-    initials: initials(fullName),
+    initials: currentUser?.initials ?? initials(fullName),
     avatar_url: "",
   };
 }

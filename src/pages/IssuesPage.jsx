@@ -10,6 +10,7 @@ import { listLookup } from "../api/lookups";
 import { UserAvatar } from "../components/UserAvatar";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingState } from "../components/LoadingState";
+import { UserSwitcher } from "../components/UserSwitcher";
 import { listIssues } from "../api/issues";
 import { listUsers } from "../api/users";
 import { useCurrentUser } from "../context/currentUser";
@@ -393,6 +394,11 @@ export function IssuesPage() {
               <Settings2 size={16} aria-hidden="true" />
               Open Settings
             </Link>
+          </section>
+
+          <section className="panel issue-user-panel">
+            <h2>Change User</h2>
+            <UserSwitcher label="Select user" />
           </section>
         </aside>
       </main>

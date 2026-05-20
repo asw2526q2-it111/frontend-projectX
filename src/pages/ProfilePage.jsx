@@ -5,7 +5,6 @@ import { EmptyState } from "../components/EmptyState";
 import { LoadingState } from "../components/LoadingState";
 import { useCurrentUser } from "../context/currentUser";
 import { useAsync } from "../hooks/useAsync";
-import { UserSwitcher } from "../components/UserSwitcher"; 
 import { ProfileCommentsList } from "../components/ProfileCommentsList";
 import { ProfileIssuesTable } from "../components/ProfileIssuesTable";
 import "../styles/profile.css";
@@ -48,8 +47,6 @@ export function ProfilePage() {
         </div>
         
         <div className="topbar-actions" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <UserSwitcher />
-          
           <Link className="btn btn-secondary" to="/issues">
             &larr; Back to issues
           </Link>
@@ -59,7 +56,8 @@ export function ProfilePage() {
       <main className="profile-layout">
         <aside className="profile-sidebar">
           <section className="profile-sidebar-panel">
-            <div className="profile-avatar-large">
+            {/* 🚀 Aquí está el cambio al nuevo nombre de clase */}
+            <div className="profile-avatar-hero">
               {user.avatar_url ? (
                 <img src={user.avatar_url} alt={`${user.username} avatar`} />
               ) : (
