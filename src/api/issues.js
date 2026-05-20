@@ -101,6 +101,14 @@ export function applyIssueWatchers(apiKey, issueId, watcherUsernames) {
   });
 }
 
+export function applyAssignee(apiKey, issueId, assigneeUsername) {
+  return applyIssueAssignees(apiKey, issueId, assigneeUsername);
+}
+
+export function applyWatchers(apiKey, issueId, watcherUsernames) {
+  return applyIssueWatchers(apiKey, issueId, watcherUsernames);
+}
+
 export function createIssueComment(apiKey, issueId, content) {
   return apiRequest(`/api/issues/${issueId}/comments/`, {
     apiKey,
@@ -126,6 +134,10 @@ export function deleteIssueComment(apiKey, commentId) {
 
 export function getIssueActivities(apiKey, issueId) {
   return apiRequest(`/api/issues/${issueId}/activities/`, { apiKey });
+}
+
+export function listIssueActivities(apiKey, issueId) {
+  return getIssueActivities(apiKey, issueId);
 }
 
 export function getUserAvatar(apiKey, username) {
@@ -155,4 +167,8 @@ export function deleteIssueAttachment(apiKey, attachmentId) {
 
 export function getIssueComments(apiKey, issueId) {
   return apiRequest(`/api/issues/${issueId}/comments/`, { apiKey });
+}
+
+export function listIssueComments(apiKey, issueId) {
+  return getIssueComments(apiKey, issueId);
 }

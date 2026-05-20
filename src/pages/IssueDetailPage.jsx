@@ -31,7 +31,6 @@ import { useAsync } from "../hooks/useAsync";
 import { getActivityActor } from "../utils/activities";
 import { getApiActionErrorMessage } from "../utils/apiError";
 import { normalizePagedList } from "../utils/apiList";
-import { getUserDisplayName } from "../utils/user";
 import {
   ATTACHMENT_ACCEPT,
   ATTACHMENT_HELP_FORMATS,
@@ -42,6 +41,7 @@ import {
   prepareIssueAttachmentUpload,
 } from "../utils/attachments";
 import { formatDate, formatSidebarDateTime } from "../utils/format";
+import { getUserDisplayName } from "../utils/user";
 
 function CommentItem({
   comment,
@@ -109,7 +109,7 @@ function CommentItem({
               disabled={actionLoading}
               onClick={onCancelEdit}
             >
-              Cancel·lar
+              Cancelar
             </button>
           </div>
         </div>
@@ -205,10 +205,7 @@ export function IssueDetailPage() {
   const apiKey = currentUser.apiKey;
 
   const issueState = useAsync(() => getIssue(apiKey, issueId), [apiKey, issueId]);
-  const attachmentsState = useAsync(
-    () => getIssueAttachments(apiKey, issueId),
-    [apiKey, issueId]
-  );
+  const attachmentsState = useAsync(() => getIssueAttachments(apiKey, issueId), [apiKey, issueId]);
   const commentsState = useAsync(() => getIssueComments(apiKey, issueId), [apiKey, issueId]);
   const activitiesState = useAsync(() => getIssueActivities(apiKey, issueId), [apiKey, issueId]);
   const usersState = useAsync(() => listUsers(apiKey), [apiKey]);
@@ -374,14 +371,12 @@ export function IssueDetailPage() {
     const isAssigned = issue?.assignee?.username === currentUsername;
     await runLateralAction(
       () => (isAssigned ? unassignMe(apiKey, issueId) : assignMe(apiKey, issueId)),
-      "No s'ha pogut actualitzar l'assignació."
+      "No s'ha pogut actualitzar l'assignacio."
     );
   }
 
   async function toggleWatch() {
-    const isWatching = (issue?.watchers ?? []).some(
-      (watcher) => watcher.username === currentUsername
-    );
+    const isWatching = (issue?.watchers ?? []).some((watcher) => watcher.username === currentUsername);
     await runLateralAction(
       () => (isWatching ? unwatchIssue(apiKey, issueId) : watchIssue(apiKey, issueId)),
       "No s'ha pogut actualitzar els watchers."
@@ -427,7 +422,7 @@ export function IssueDetailPage() {
 
   if (issueState.loading && !issue) {
     return (
-      <IssueDetailWorkspace headerSubtitle="Carregant issue…">
+      <IssueDetailWorkspace headerSubtitle="Carregant issue...">
         <section className="content panel issue-detail-content">
           <LoadingState />
         </section>
@@ -476,9 +471,7 @@ export function IssueDetailPage() {
                 </time>
               </div>
             </header>
-            <p className="issue-detail-description">
-              {issue.description || "Sense descripcio."}
-            </p>
+            <p className="issue-detail-description">{issue.description || "Sense descripcio."}</p>
           </section>
 
           <section className="panel">
@@ -488,7 +481,7 @@ export function IssueDetailPage() {
             </p>
             <div className="attachment-list">
               {attachmentsState.loading ? (
-                <p className="muted">Carregant adjunts…</p>
+                <p className="muted">Carregant adjunts...</p>
               ) : attachmentsState.error ? (
                 <p className="form-error">{attachmentsState.error.message}</p>
               ) : attachmentItems.length > 0 ? (
@@ -514,16 +507,11 @@ export function IssueDetailPage() {
                         )}
                         {attachment.uploaded_at ? (
                           <p className="attachment-item__meta">
-                            <time dateTime={attachment.uploaded_at}>
-                              {formatDate(attachment.uploaded_at)}
-                            </time>
+                            <time dateTime={attachment.uploaded_at}>{formatDate(attachment.uploaded_at)}</time>
                             {attachment.uploaded_by?.username ? (
                               <>
                                 {" · "}
-                                <UserProfileLink
-                                  user={attachment.uploaded_by}
-                                  layout="mention"
-                                />
+                                <UserProfileLink user={attachment.uploaded_by} layout="mention" />
                               </>
                             ) : null}
                           </p>
@@ -536,7 +524,7 @@ export function IssueDetailPage() {
                           disabled={deletingAttachmentId !== null}
                           onClick={() => void removeAttachment(attachment.id)}
                         >
-                          {isDeleting ? "Eliminant…" : "Eliminar"}
+                          {isDeleting ? "Eliminant..." : "Eliminar"}
                         </button>
                       ) : null}
                     </article>
@@ -555,9 +543,7 @@ export function IssueDetailPage() {
               onChange={(event) => void handleAttachmentFileChange(event)}
             />
             {attachmentUploadError ? (
-              <p className="form-error issue-detail-attachment-upload-error">
-                {attachmentUploadError}
-              </p>
+              <p className="form-error issue-detail-attachment-upload-error">{attachmentUploadError}</p>
             ) : null}
             <button
               className="button button-primary"
@@ -565,7 +551,7 @@ export function IssueDetailPage() {
               disabled={attachmentUploadLoading}
               onClick={() => attachmentFileInputRef.current?.click()}
             >
-              {attachmentUploadLoading ? "Pujant…" : "Upload"}
+              {attachmentUploadLoading ? "Pujant..." : "Upload"}
             </button>
           </section>
 
@@ -603,12 +589,10 @@ export function IssueDetailPage() {
                     Publicar
                   </button>
                 </form>
-                {commentActionError ? (
-                  <p className="form-error comment-action-error">{commentActionError}</p>
-                ) : null}
+                {commentActionError ? <p className="form-error comment-action-error">{commentActionError}</p> : null}
                 <div className="comment-list">
                   {commentsState.loading ? (
-                    <p className="muted">Carregant comentaris…</p>
+                    <p className="muted">Carregant comentaris...</p>
                   ) : commentsState.error ? (
                     <p className="form-error">{commentsState.error.message}</p>
                   ) : commentList.length > 0 ? (
@@ -636,7 +620,7 @@ export function IssueDetailPage() {
               <div className="discussion-panel" role="tabpanel">
                 <div className="comment-list">
                   {activitiesState.loading ? (
-                    <p className="muted">Carregant activitats…</p>
+                    <p className="muted">Carregant activitats...</p>
                   ) : activitiesState.error ? (
                     <p className="form-error">{activitiesState.error.message}</p>
                   ) : activities.length > 0 ? (
@@ -666,16 +650,8 @@ export function IssueDetailPage() {
           <section className="issue-sidebar-section">
             <div className="issue-meta-list">
               <IssueMetaRow label="Type" value={issue.type?.name} color={issue.type?.color} />
-              <IssueMetaRow
-                label="Severity"
-                value={issue.severity?.name}
-                color={issue.severity?.color}
-              />
-              <IssueMetaRow
-                label="Priority"
-                value={issue.priority?.name}
-                color={issue.priority?.color}
-              />
+              <IssueMetaRow label="Severity" value={issue.severity?.name} color={issue.severity?.color} />
+              <IssueMetaRow label="Priority" value={issue.priority?.name} color={issue.priority?.color} />
               <IssueMetaRow
                 label="Deadline"
                 value={formatSidebarDateTime(issue.deadline)}
@@ -695,7 +671,7 @@ export function IssueDetailPage() {
                 disabled={lateralLoading}
                 onClick={() => void toggleAssignToMe()}
               >
-                {isAssignedToMe ? "Unassign" : "Assign to me"}
+                {isAssignedToMe ? "Unassign" : "Assign me"}
               </button>
             </div>
 
@@ -753,7 +729,7 @@ export function IssueDetailPage() {
                 disabled={lateralLoading}
                 onClick={() => void toggleWatch()}
               >
-                {isWatching ? "Unwatch" : "Watch"}
+                {isWatching ? "Unwatch" : "Watch me"}
               </button>
             </div>
 
@@ -802,9 +778,7 @@ export function IssueDetailPage() {
             </div>
           </section>
 
-          {lateralError ? (
-            <p className="form-error issue-sidebar-error">{lateralError}</p>
-          ) : null}
+          {lateralError ? <p className="form-error issue-sidebar-error">{lateralError}</p> : null}
 
           {isIssueCreator ? (
             <section className="issue-sidebar-section">
@@ -822,7 +796,7 @@ export function IssueDetailPage() {
                   disabled={issueDeleteLoading}
                   onClick={() => void deleteIssueAndLeave()}
                 >
-                  {issueDeleteLoading ? "Eliminant…" : "Delete"}
+                  {issueDeleteLoading ? "Eliminant..." : "Delete"}
                 </button>
               </div>
               {issueDeleteError ? <p className="form-error">{issueDeleteError}</p> : null}

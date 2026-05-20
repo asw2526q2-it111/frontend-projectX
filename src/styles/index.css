@@ -243,7 +243,7 @@ a {
 }
 
 .button:disabled {
-  cursor: wait;
+  cursor: not-allowed;
   opacity: 0.72;
 }
 
@@ -1162,12 +1162,28 @@ img.avatar.avatar--sm {
 }
 
 .issue-workspace .topbar-profile {
+  display: flex;
+  align-items: center;
   justify-self: end;
 }
 
 .issue-profile-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
   min-height: 44px;
   padding: 0 16px;
+  line-height: 1;
+  font-weight: 600;
+}
+
+.issue-profile-button__label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
 .profile-avatar-large {
@@ -1176,15 +1192,20 @@ img.avatar.avatar--sm {
   justify-content: center;
   width: 30px;
   height: 30px;
+  flex-shrink: 0;
+  overflow: hidden;
   border-radius: 50%;
   color: #ffffff;
   background: #1f2d3d;
   font-size: 0.82rem;
   font-weight: 700;
-  flex-shrink: 0;
+  line-height: 1;
 }
 
 img.profile-avatar-large {
+  display: block;
+  width: 30px;
+  height: 30px;
   object-fit: cover;
   background: transparent;
 }
