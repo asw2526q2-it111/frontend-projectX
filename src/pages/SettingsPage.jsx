@@ -1,10 +1,11 @@
-import { ArrowLeft, PencilLine, Plus, Settings2, Trash2, X } from "lucide-react";
+import { ArrowLeft, Settings2, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { AppBrand } from "../components/AppBrand";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingState } from "../components/LoadingState";
-import { useCurrentUser } from "../context/currentUser";
 import { createLookup, deleteLookup, listLookup, updateLookup } from "../api/lookups";
+import { useCurrentUser } from "../context/currentUser";
 
 const CATALOGS = {
   statuses: {
@@ -15,7 +16,7 @@ const CATALOGS = {
     fields: [
       { name: "name", label: "Name", type: "text", placeholder: "Open" },
       { name: "color", label: "Color", type: "color" },
-      { name: "is_closed", label: "Closed status", type: "checkbox" },
+      { name: "is_closed", label: "Closed?", type: "checkbox" },
     ],
     defaultValues: { name: "", color: "#0d8aa8", is_closed: false },
   },
@@ -71,7 +72,7 @@ const CATALOGS = {
     fields: [
       { name: "name", label: "Name", type: "text", placeholder: "Due soon" },
       { name: "color", label: "Color", type: "color" },
-      { name: "days_to_due_date", label: "Days to due date", type: "number", placeholder: "3" },
+      { name: "days_to_due_date", label: "Days", type: "number", placeholder: "3" },
       {
         name: "before_after",
         label: "Timing",
@@ -164,22 +165,16 @@ function serializeFormValues(catalog, values) {
   return { payload };
 }
 
-function formatItemSummary(catalogKey, item) {
-  if (catalogKey === "dueDates") {
-    return `${item.days_to_due_date} days ${item.before_after}`;
-  }
-
-  if (catalogKey === "statuses") {
-    return item.is_closed ? "Closed" : "Open";
-  }
-
-  return item.color;
+function getRowFields(catalog) {
+  const colorField = catalog.fields.find((field) => field.name === "color");
+  const restFields = catalog.fields.filter((field) => field.name !== "color");
+  return colorField ? [colorField, ...restFields] : catalog.fields;
 }
 
-function LookupField({ field, value, onChange }) {
+function FieldControl({ field, value, onChange, compact = false }) {
   if (field.type === "checkbox") {
     return (
-      <label className="settings-field settings-field--check">
+      <label className={`settings-field settings-field--check${compact ? " settings-field--compact" : ""}`}>
         <input
           type="checkbox"
           checked={Boolean(value)}
@@ -190,10 +185,10 @@ function LookupField({ field, value, onChange }) {
     );
   }
 
-  return (
-    <label className="settings-field">
-      <span>{field.label}</span>
-      {field.type === "select" ? (
+  if (field.type === "select") {
+    return (
+      <label className="settings-field">
+        {!compact ? <span>{field.label}</span> : null}
         <select value={value} onChange={(event) => onChange(event.target.value)}>
           {field.options.map((option) => (
             <option key={option.value} value={option.value}>
@@ -201,106 +196,70 @@ function LookupField({ field, value, onChange }) {
             </option>
           ))}
         </select>
-      ) : (
-        <input
-          type={field.type}
-          value={value}
-          placeholder={field.placeholder}
-          onChange={(event) => onChange(event.target.value)}
-        />
-      )}
+      </label>
+    );
+  }
+
+  if (field.name === "color") {
+    return (
+      <label className="settings-field settings-field--color">
+        {!compact ? <span>{field.label}</span> : null}
+        <div className="settings-color-field">
+          <span className="settings-color-swatch" style={{ background: value || "#94a3b8" }} aria-hidden="true" />
+          <input
+            type="color"
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            aria-label={field.label}
+          />
+        </div>
+      </label>
+    );
+  }
+
+  return (
+    <label className="settings-field">
+      {!compact ? <span>{field.label}</span> : null}
+      <input
+        type={field.type}
+        value={value}
+        placeholder={field.placeholder}
+        onChange={(event) => onChange(event.target.value)}
+      />
     </label>
   );
 }
 
-function SettingsModal({ catalog, mode, value, saving, onClose, onSubmit, onChange }) {
-  if (!catalog) return null;
+function SettingsRow({ catalog, item, draft, saving, onChange, onSave, onDelete, gridTemplateColumns }) {
+  const rowFields = getRowFields(catalog);
 
   return (
-    <div className="settings-modal" role="presentation" onClick={onClose}>
-      <div
-        className="settings-modal__dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-label={`${mode === "edit" ? "Edit" : "Create"} ${catalog.singular}`}
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="settings-modal__header">
-          <div>
-            <span className="eyebrow">{mode === "edit" ? "Edit" : "Create"}</span>
-            <h3>{mode === "edit" ? `Edit ${catalog.singular}` : `Create ${catalog.singular}`}</h3>
-            <p>{catalog.description}</p>
-          </div>
-
-          <button className="button settings-modal__close" type="button" onClick={onClose}>
-            <X size={16} aria-hidden="true" />
-          </button>
+    <div className="settings-table-row" style={{ gridTemplateColumns }}>
+      {rowFields.map((field, index) => (
+        <div
+          key={field.name}
+          className={`settings-table-cell${field.type === "checkbox" ? " settings-table-cell--center" : ""}${
+            field.name === "color" ? " settings-table-cell--color" : ""
+          }`}
+        >
+          <FieldControl
+            field={field}
+            value={draft[field.name]}
+            onChange={(nextValue) => onChange(item.name, field.name, nextValue)}
+            compact={index > 0}
+          />
         </div>
+      ))}
 
-        <form className="settings-modal__form" onSubmit={onSubmit}>
-          <div className="settings-form-grid">
-            {catalog.fields.map((field) => (
-              <LookupField
-                key={field.name}
-                field={field}
-                value={value[field.name]}
-                onChange={(nextValue) =>
-                  onChange((current) => ({
-                    ...current,
-                    [field.name]: nextValue,
-                  }))
-                }
-              />
-            ))}
-          </div>
-
-          <div className="settings-modal__actions">
-            <button className="button" type="button" onClick={onClose} disabled={saving}>
-              Cancel
-            </button>
-            <button className="button button-primary" type="submit" disabled={saving}>
-              {saving ? "Saving..." : mode === "edit" ? "Save changes" : `Create ${catalog.singular}`}
-            </button>
-          </div>
-        </form>
+      <div className="settings-table-cell settings-table-actions">
+        <button className="button button-primary" type="button" onClick={() => onSave(item.name)} disabled={saving}>
+          Save
+        </button>
+        <button className="button button-danger" type="button" onClick={() => onDelete(item.name)} disabled={saving}>
+          <Trash2 size={14} aria-hidden="true" />
+          Delete
+        </button>
       </div>
-    </div>
-  );
-}
-
-function CatalogRow({ catalogKey, item, onEdit, onDelete }) {
-  return (
-    <div
-      className="settings-row"
-      role="button"
-      tabIndex={0}
-      onClick={() => onEdit(item)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onEdit(item);
-        }
-      }}
-    >
-      <div className="settings-row__main">
-        <span className="settings-dot" style={{ background: item.color || "#647084" }} aria-hidden="true" />
-        <div>
-          <strong>{item.name}</strong>
-          <span>{formatItemSummary(catalogKey, item)}</span>
-        </div>
-      </div>
-
-      <button
-        className="button button-danger settings-row__delete"
-        type="button"
-        aria-label={`Delete ${item.name}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          onDelete(item);
-        }}
-      >
-        <Trash2 size={15} aria-hidden="true" />
-      </button>
     </div>
   );
 }
@@ -309,19 +268,19 @@ export function SettingsPage() {
   const { currentUser } = useCurrentUser();
   const [activeCatalogKey, setActiveCatalogKey] = useState("statuses");
   const [items, setItems] = useState([]);
+  const [rowDrafts, setRowDrafts] = useState({});
+  const [createDraft, setCreateDraft] = useState(() => cloneDefaultValues(CATALOGS.statuses));
   const [loading, setLoading] = useState(true);
+  const [savingCreate, setSavingCreate] = useState(false);
+  const [savingRowName, setSavingRowName] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState("create");
-  const [editingName, setEditingName] = useState("");
-  const [formValues, setFormValues] = useState(() => cloneDefaultValues(CATALOGS.statuses));
 
   const activeCatalog = CATALOGS[activeCatalogKey];
   const activeItems = useMemo(
     () => [...items].sort((left, right) => left.name.localeCompare(right.name)),
     [items]
   );
+  const rowFieldCount = getRowFields(activeCatalog).length;
 
   useEffect(() => {
     let ignore = false;
@@ -334,11 +293,16 @@ export function SettingsPage() {
         const payload = await listLookup(currentUser.apiKey, activeCatalog.resource);
         if (ignore) return;
 
-        setItems(getResults(payload));
+        const nextItems = getResults(payload);
+        setItems(nextItems);
+        setRowDrafts(
+          Object.fromEntries(nextItems.map((item) => [item.name, itemToFormValues(activeCatalog, item)]))
+        );
       } catch (error) {
         if (ignore) return;
 
         setItems([]);
+        setRowDrafts({});
         setErrorMessage(
           `Unable to load ${activeCatalog.label.toLowerCase()}. ${getErrorMessage(
             error,
@@ -358,110 +322,117 @@ export function SettingsPage() {
   }, [activeCatalog.resource, activeCatalog.label, currentUser.apiKey]);
 
   useEffect(() => {
-    setModalOpen(false);
-    setEditingName("");
-    setFormValues(cloneDefaultValues(activeCatalog));
+    setCreateDraft(cloneDefaultValues(activeCatalog));
     setErrorMessage("");
   }, [activeCatalog]);
 
-  function openCreateModal() {
-    setModalMode("create");
-    setEditingName("");
-    setFormValues(cloneDefaultValues(activeCatalog));
-    setErrorMessage("");
-    setModalOpen(true);
+  function handleCreateFieldChange(fieldName, value) {
+    setCreateDraft((current) => ({
+      ...current,
+      [fieldName]: value,
+    }));
   }
 
-  function openEditModal(item) {
-    setModalMode("edit");
-    setEditingName(item.name);
-    setFormValues(itemToFormValues(activeCatalog, item));
-    setErrorMessage("");
-    setModalOpen(true);
+  function handleRowFieldChange(originalName, fieldName, value) {
+    setRowDrafts((current) => ({
+      ...current,
+      [originalName]: {
+        ...(current[originalName] ?? {}),
+        [fieldName]: value,
+      },
+    }));
   }
 
-  function closeModal() {
-    setModalOpen(false);
-    setErrorMessage("");
+  async function refreshCatalog() {
+    const payload = await listLookup(currentUser.apiKey, activeCatalog.resource);
+    const nextItems = getResults(payload);
+    setItems(nextItems);
+    setRowDrafts(Object.fromEntries(nextItems.map((item) => [item.name, itemToFormValues(activeCatalog, item)])));
   }
 
-  async function handleSubmit(event) {
+  async function handleCreate(event) {
     event.preventDefault();
 
-    const { payload, error } = serializeFormValues(activeCatalog, formValues);
+    const { payload, error } = serializeFormValues(activeCatalog, createDraft);
     if (error) {
       setErrorMessage(error);
       return;
     }
 
-    setSaving(true);
+    setSavingCreate(true);
     setErrorMessage("");
 
     try {
-      if (modalMode === "edit") {
-        await updateLookup(currentUser.apiKey, activeCatalog.resource, editingName, payload);
-      } else {
-        await createLookup(currentUser.apiKey, activeCatalog.resource, payload);
-      }
-
-      const refreshed = await listLookup(currentUser.apiKey, activeCatalog.resource);
-      setItems(getResults(refreshed));
-      closeModal();
-      setFormValues(cloneDefaultValues(activeCatalog));
-      setEditingName("");
+      await createLookup(currentUser.apiKey, activeCatalog.resource, payload);
+      await refreshCatalog();
+      setCreateDraft(cloneDefaultValues(activeCatalog));
     } catch (error) {
-      setErrorMessage(getErrorMessage(error, `Unable to save ${activeCatalog.singular}.`));
+      setErrorMessage(getErrorMessage(error, `Unable to create ${activeCatalog.singular}.`));
     } finally {
-      setSaving(false);
+      setSavingCreate(false);
     }
   }
 
-  async function handleDelete(item) {
-    if (!window.confirm(`Delete ${item.name}?`)) return;
+  async function handleSave(originalName) {
+    const draft = rowDrafts[originalName] ?? {};
+    const { payload, error } = serializeFormValues(activeCatalog, draft);
+    if (error) {
+      setErrorMessage(error);
+      return;
+    }
 
-    setSaving(true);
+    setSavingRowName(originalName);
     setErrorMessage("");
 
     try {
-      await deleteLookup(currentUser.apiKey, activeCatalog.resource, item.name);
-      const refreshed = await listLookup(currentUser.apiKey, activeCatalog.resource);
-      setItems(getResults(refreshed));
+      await updateLookup(currentUser.apiKey, activeCatalog.resource, originalName, payload);
+      await refreshCatalog();
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error, `Unable to save ${activeCatalog.singular}.`));
+    } finally {
+      setSavingRowName("");
+    }
+  }
 
-      if (modalOpen && editingName === item.name) {
-        closeModal();
-      }
+  async function handleDelete(originalName) {
+    if (!window.confirm(`Delete ${originalName}?`)) return;
+
+    setSavingRowName(originalName);
+    setErrorMessage("");
+
+    try {
+      await deleteLookup(currentUser.apiKey, activeCatalog.resource, originalName);
+      await refreshCatalog();
     } catch (error) {
       setErrorMessage(getErrorMessage(error, `Unable to delete ${activeCatalog.singular}.`));
     } finally {
-      setSaving(false);
+      setSavingRowName("");
     }
   }
 
   return (
-    <section className="page-stack settings-page">
-      <div className="section-header settings-header">
-        <div>
-          <h2>Catalog settings</h2>
-          <p>Manage the lookup values used across issue creation and filtering.</p>
-        </div>
+    <section className="page-stack settings-page settings-workspace issue-workspace">
+      <header className="topbar custom-topbar issue-topbar">
+        <AppBrand className="issue-workspace-brand" subtitle="Focus mode for bug tracking and triage" />
 
-        <Link className="button" to="/issues">
+        <div className="topbar-search" aria-hidden="true" />
+
+        <Link className="button settings-back-button" to="/issues">
           <ArrowLeft size={16} aria-hidden="true" />
           Back to issues
         </Link>
-      </div>
+      </header>
 
-      <div className="settings-shell">
+      <main className="settings-shell">
         <aside className="panel settings-sidebar">
           <div className="settings-sidebar__title">
-            <Settings2 size={18} aria-hidden="true" />
-            Catalogs
+            <Settings2 size={17} aria-hidden="true" />
+            Settings Menu
           </div>
 
           <div className="settings-nav">
             {CATALOG_ORDER.map((key) => {
               const catalog = CATALOGS[key];
-
               return (
                 <button
                   key={key}
@@ -469,66 +440,83 @@ export function SettingsPage() {
                   type="button"
                   onClick={() => setActiveCatalogKey(key)}
                 >
-                  <span>
-                    <strong>{catalog.label}</strong>
-                  </span>
+                  <span>{catalog.label}</span>
                 </button>
               );
             })}
           </div>
         </aside>
 
-        <main className="panel settings-panel">
-          <div className="settings-panel__header">
-            <div>
-              <span className="eyebrow">{activeCatalog.label}</span>
-              <h3>{activeCatalog.label}</h3>
-              <p>{activeCatalog.description}</p>
-            </div>
+        <section className="settings-main">
+          <section className="panel settings-create-card">
+            <h2>Add new {activeCatalog.singular}</h2>
 
-            <button className="button button-primary" type="button" onClick={openCreateModal}>
-              <Plus size={16} aria-hidden="true" />
-              Create
-            </button>
-          </div>
+            <form className="settings-create-form" onSubmit={handleCreate}>
+              <div className="settings-create-grid">
+                {activeCatalog.fields.map((field) => (
+                  <div key={field.name} className="settings-create-cell">
+                    <FieldControl
+                      field={field}
+                      value={createDraft[field.name]}
+                      onChange={(nextValue) => handleCreateFieldChange(field.name, nextValue)}
+                      compact
+                    />
+                  </div>
+                ))}
 
-          {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
-          {loading ? <LoadingState /> : null}
+                <button className="button button-primary settings-create-button" type="submit" disabled={savingCreate}>
+                  Add
+                </button>
+              </div>
+            </form>
 
-          {!loading && activeItems.length > 0 ? (
-            <div className="settings-list">
-              {activeItems.map((item) => (
-                <CatalogRow
-                  key={item.name}
-                  catalogKey={activeCatalogKey}
-                  item={item}
-                  onEdit={openEditModal}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </div>
-          ) : null}
+            {errorMessage ? <p className="form-error settings-error">{errorMessage}</p> : null}
+          </section>
 
-          {!loading && activeItems.length === 0 && !errorMessage ? (
-            <EmptyState
-              title={`No ${activeCatalog.label.toLowerCase()} yet`}
-              description={`Create the first ${activeCatalog.singular} to start using it in the app.`}
-            />
-          ) : null}
-        </main>
-      </div>
+          <section className="panel settings-table-card">
+            <h2>Existing edit {activeCatalog.label.toLowerCase()}</h2>
 
-      {modalOpen ? (
-        <SettingsModal
-          catalog={activeCatalog}
-          mode={modalMode}
-          value={formValues}
-          saving={saving}
-          onClose={closeModal}
-          onSubmit={handleSubmit}
-          onChange={setFormValues}
-        />
-      ) : null}
+            {loading ? <LoadingState /> : null}
+
+            {!loading && activeItems.length > 0 ? (
+              <div className="settings-table">
+                <div
+                  className="settings-table-row settings-table-row--header"
+                  style={{ gridTemplateColumns: `72px repeat(${Math.max(rowFieldCount - 1, 1)}, minmax(0, 1fr)) 180px` }}
+                >
+                  {getRowFields(activeCatalog).map((field) => (
+                    <div key={field.name} className="settings-table-head">
+                      {field.label}
+                    </div>
+                  ))}
+                  <div className="settings-table-head">Actions</div>
+                </div>
+
+                {activeItems.map((item) => (
+                  <SettingsRow
+                    key={item.name}
+                    catalog={activeCatalog}
+                    item={item}
+                    draft={rowDrafts[item.name] ?? itemToFormValues(activeCatalog, item)}
+                    saving={savingRowName === item.name}
+                    onChange={handleRowFieldChange}
+                    onSave={handleSave}
+                    onDelete={handleDelete}
+                    gridTemplateColumns={`72px repeat(${Math.max(rowFieldCount - 1, 1)}, minmax(0, 1fr)) 180px`}
+                  />
+                ))}
+              </div>
+            ) : null}
+
+            {!loading && activeItems.length === 0 && !errorMessage ? (
+              <EmptyState
+                title={`No ${activeCatalog.label.toLowerCase()} yet`}
+                description={`Create the first ${activeCatalog.singular} to start using it in the app.`}
+              />
+            ) : null}
+          </section>
+        </section>
+      </main>
     </section>
   );
 }
