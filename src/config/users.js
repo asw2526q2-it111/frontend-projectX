@@ -6,7 +6,7 @@ export const FRONTEND_USERS = [
   },
   {
     username: "angelabuxo",
-    fullName: "Angela Buxo",
+    fullName: "Àngela Buxó",
     apiKey: "1b391573caca47054ab39f3153ab171d3eeab98244b546b718c9f276a5141d63",
     //apiKey: "dd84d344b9bfaabc30816160b80ba26645897027067cc0b019317a43eeae8018",
   },
