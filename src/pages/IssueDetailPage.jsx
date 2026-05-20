@@ -1,4 +1,4 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Clock3 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
@@ -50,71 +50,88 @@ function CommentItem({
   editingContent,
   onEditingContentChange,
   actionLoading,
+  commentActionError,
   onStartEdit,
   onCancelEdit,
   onSaveEdit,
   onRemove,
 }) {
   const author = comment.created_by;
+  const authorDate = comment.updated_at ?? comment.created_at;
 
   return (
     <article className="comment-item">
-      <header className="comment-item__header">
-        <UserProfileLink user={author} layout="author" />
-        <div className="comment-item__meta">
-          <time className="comment-item__date" dateTime={comment.created_at}>
-            {formatDate(comment.created_at)}
-          </time>
-          {isOwner && !isEditing ? (
-            <div className="comment-item__actions">
-              <button
-                className="button comment-item__action"
-                type="button"
-                disabled={actionLoading}
-                onClick={onStartEdit}
+      <header className="comment-header">
+        <div className="comment-author">
+          {author?.username ? (
+            <>
+              <Link
+                className="comment-author-avatar-link"
+                to={`/profile/${author.username}`}
+                title={`View ${author.username}'s profile`}
               >
-                Edit
-              </button>
-              <button
-                className="button comment-item__action comment-item__action--danger"
-                type="button"
-                disabled={actionLoading}
-                onClick={onRemove}
-              >
-                Delete
-              </button>
-            </div>
-          ) : null}
+                <UserAvatar user={author} variant="commentAuthor" />
+              </Link>
+              <div className="comment-author-copy">
+                <Link className="comment-author-link" to={`/profile/${author.username}`}>
+                  {author.username}
+                </Link>
+                <time className="comment-author-date" dateTime={authorDate}>
+                  {formatSidebarDateTime(authorDate)}
+                </time>
+              </div>
+            </>
+          ) : (
+            <>
+              <span className="comment-author-avatar comment-author-avatar--initials">?</span>
+              <div className="comment-author-copy">
+                <strong>Anonymous</strong>
+                <time className="comment-author-date" dateTime={authorDate}>
+                  {formatSidebarDateTime(authorDate)}
+                </time>
+              </div>
+            </>
+          )}
         </div>
       </header>
+
       {isEditing ? (
-        <div className="comment-item__edit">
+        <form
+          className="comment-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSaveEdit();
+          }}
+        >
           <textarea
             value={editingContent}
             onChange={(event) => onEditingContentChange(event.target.value)}
             aria-label="Edit comment"
           />
-          <div className="comment-item__edit-actions">
-            <button
-              className="button button-primary"
-              type="button"
-              disabled={actionLoading}
-              onClick={onSaveEdit}
-            >
+          {commentActionError ? <div className="comment-error">{commentActionError}</div> : null}
+          <div className="comment-actions">
+            <button className="btn btn-primary" type="submit" disabled={actionLoading}>
               Save
             </button>
-            <button
-              className="button"
-              type="button"
-              disabled={actionLoading}
-              onClick={onCancelEdit}
-            >
+            <button className="btn btn-secondary" type="button" disabled={actionLoading} onClick={onCancelEdit}>
               Cancel
             </button>
           </div>
-        </div>
+        </form>
       ) : (
-        <p className="comment-item__content">{comment.content}</p>
+        <>
+          <p className="comment-content">{comment.content}</p>
+          {isOwner ? (
+            <div className="comment-actions">
+              <button className="btn btn-edit" type="button" disabled={actionLoading} onClick={onStartEdit}>
+                Edit
+              </button>
+              <button className="btn btn-delete" type="button" disabled={actionLoading} onClick={onRemove}>
+                Delete
+              </button>
+            </div>
+          ) : null}
+        </>
       )}
     </article>
   );
@@ -147,49 +164,144 @@ function UserPickerOption({ user, inputType, name, checked, onChange }) {
 function ActivityItem({ activity }) {
   const author = getActivityActor(activity);
   const authorName = author ? author.full_name ?? author.username : "System";
+  const activityType = activity.get_activity_type_display ?? activity.activity_type ?? "Activity";
 
   return (
     <article className="comment-item">
-      <header className="comment-item__header">
-        {author ? (
-          <UserProfileLink user={author} layout="author" />
-        ) : (
-          <div className="comment-item__author">
-            <strong>{authorName}</strong>
-          </div>
-        )}
-        <div className="comment-item__meta">
-          <time className="comment-item__date" dateTime={activity.created_at}>
-            {formatDate(activity.created_at)}
-          </time>
+      <header className="comment-header">
+        <div className="comment-author">
+          {author?.username ? (
+            <>
+              <Link
+                className="comment-author-avatar-link"
+                to={`/profile/${author.username}`}
+                title={`View ${author.username}'s profile`}
+              >
+                <UserAvatar user={author} variant="commentAuthor" />
+              </Link>
+              <div className="comment-author-copy">
+                <Link className="comment-author-link" to={`/profile/${author.username}`}>
+                  {author.username}
+                </Link>
+                <time className="comment-author-date" dateTime={activity.created_at}>
+                  {formatSidebarDateTime(activity.created_at)}
+                </time>
+              </div>
+            </>
+          ) : (
+            <>
+              <span className="comment-author-avatar comment-author-avatar--initials">S</span>
+              <div className="comment-author-copy">
+                <strong>{authorName}</strong>
+                <time className="comment-author-date" dateTime={activity.created_at}>
+                  {formatSidebarDateTime(activity.created_at)}
+                </time>
+              </div>
+            </>
+          )}
         </div>
+        <div className="attachment-sub">{activityType}</div>
       </header>
-      <p className="comment-item__content">{activity.summary}</p>
+      <p className="comment-content">{activity.summary}</p>
     </article>
   );
 }
 
-function IssueDetailWorkspace({ headerSubtitle, headerUser, children }) {
-  const { currentUser } = useCurrentUser();
-  const topbarUser = headerUser ?? currentUser;
-
+function IssueDetailWorkspace({ headerSubtitle, children }) {
   return (
     <IssueWorkspaceShell pageClassName="issue-workspace issue-detail-page">
-      <header className="topbar custom-topbar issue-topbar issue-detail-topbar">
+      <header className="topbar issue-detail-topbar">
         <AppBrand className="issue-workspace-brand" subtitle={headerSubtitle} />
-        <div className="issue-detail-topbar-actions">
-          <Link className="button issue-list-secondary-button" to="/issues">
+        <div className="topbar-actions">
+          <Link className="btn btn-secondary" to="/issues">
             <ArrowLeft size={16} aria-hidden="true" />
             Back to Issues
           </Link>
-          <Link className="button issue-profile-button" to={`/profile/${currentUser.username}`}>
-            <UserAvatar user={topbarUser} variant="topbar" />
-            <span className="issue-profile-button__label">{currentUser.username}</span>
-          </Link>
         </div>
       </header>
-      <main className="layout issue-workspace-layout issue-detail-layout">{children}</main>
+      <main className="create-layout issue-shell">{children}</main>
     </IssueWorkspaceShell>
+  );
+}
+
+function IssueCreatorCard({ creator, createdAt }) {
+  if (!creator?.username) {
+    return (
+      <div className="issue-creator-card">
+        <span className="issue-user-avatar issue-user-avatar--initials">?</span>
+        <div className="issue-creator-copy">
+          <span className="issue-creator-label">Created by Unknown</span>
+          <span className="issue-creator-date">{formatSidebarDateTime(createdAt)}</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="issue-creator-card">
+      <Link
+        className="issue-creator-avatar-link"
+        to={`/profile/${creator.username}`}
+        title={`View ${creator.username}'s profile`}
+      >
+        <UserAvatar user={creator} variant="creator" />
+      </Link>
+      <div className="issue-creator-copy">
+        <span className="issue-creator-label">
+          Created by{" "}
+          <Link className="issue-creator-link" to={`/profile/${creator.username}`}>
+            {creator.username}
+          </Link>
+        </span>
+        <span className="issue-creator-date">{formatSidebarDateTime(createdAt)}</span>
+      </div>
+    </div>
+  );
+}
+
+function IssueDeadlineIcon({ deadline, color }) {
+  if (!deadline) return null;
+
+  return (
+    <Clock3
+      className="issue-title-icon"
+      size={20}
+      color={color || "#94a3b8"}
+      aria-label={`Deadline: ${formatDate(deadline)}`}
+    />
+  );
+}
+
+function AttachmentItem({ attachment, canDelete, isDeleting, onRemove }) {
+  return (
+    <article className="comment-item">
+      <div className="comment-header">
+        {attachment.file_url ? (
+          <a
+            className="attachment-name"
+            href={attachment.file_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="View or download file"
+          >
+            {attachment.file_name}
+          </a>
+        ) : (
+          <span className="attachment-name">{attachment.file_name}</span>
+        )}
+      </div>
+      <div className="attachment-sub">
+        Uploaded {formatSidebarDateTime(attachment.uploaded_at)}
+        {attachment.uploaded_by?.username ? ` by ${attachment.uploaded_by.username}` : ""}
+      </div>
+      {canDelete ? (
+        <div className="comment-actions">
+          <button className="btn btn-delete" type="button" disabled={isDeleting} onClick={onRemove}>
+            {isDeleting ? "Deleting..." : "Delete"}
+          </button>
+        </div>
+      ) : null}
+    </article>
   );
 }
 
@@ -237,10 +349,6 @@ export function IssueDetailPage() {
     setDraftAssigneeUsername(issue.assignee?.username ?? "");
     setDraftWatcherUsernames((issue.watchers ?? []).map((watcher) => watcher.username));
   }, [issue]);
-
-  async function reloadIssueAndActivities() {
-    await Promise.all([issueState.reload({ silent: true }), activitiesState.reload()]);
-  }
 
   async function reloadDiscussion() {
     await Promise.all([commentsState.reload(), activitiesState.reload()]);
@@ -419,7 +527,7 @@ export function IssueDetailPage() {
   if (issueState.loading && !issue) {
     return (
       <IssueDetailWorkspace headerSubtitle="Loading issue...">
-        <section className="content panel issue-detail-content">
+        <section className="panel">
           <LoadingState />
         </section>
       </IssueDetailWorkspace>
@@ -429,7 +537,7 @@ export function IssueDetailPage() {
   if (issueState.error || !issue) {
     return (
       <IssueDetailWorkspace headerSubtitle="Issue no disponible">
-        <section className="content panel issue-detail-content">
+        <section className="panel">
           <EmptyState
             title="The issue couldn't be loaded"
             description={issueState.error?.message ?? "Issue no trobada."}
@@ -439,7 +547,6 @@ export function IssueDetailPage() {
     );
   }
 
-  const headerUser = users.find((user) => user.username === currentUsername);
   const creator = issue.created_by;
   const createdAt = issue.date_created ?? issue.created_at;
   const statusName = issue.status?.name ?? "Unspecified";
@@ -451,110 +558,108 @@ export function IssueDetailPage() {
   const isIssueCreator = issue.created_by?.username === currentUsername;
 
   return (
-    <IssueDetailWorkspace headerSubtitle={`Issue #${issue.id}`} headerUser={headerUser}>
-      <section className="content panel issue-detail-content">
-        <div className="page-stack">
-          <section className="panel">
-            <header className="content-header issue-detail-header">
-              <div>
-                <p className="eyebrow">Issue #{issue.id}</p>
-                <h2>{issue.title}</h2>
+    <IssueDetailWorkspace headerSubtitle="Issue details">
+      <div className="issue-view-grid">
+        <div className="issue-content-stack">
+          <section className="panel issue-hero-panel">
+            <div className="issue-hero-top">
+              <div className="issue-heading-wrap">
+                <div className="issue-title-row">
+                  <span className="issue-title-number">#{issue.id}</span>
+                  <h2 className="issue-title-text">{issue.title}</h2>
+                  <IssueDeadlineIcon deadline={issue.deadline} color={issue.deadline_color} />
+                </div>
+
+                {issue.tags?.length ? (
+                  <div className="tag-row issue-tag-row">
+                    {issue.tags.map((tag) => (
+                      <span key={tag.name} className="tag-pill" style={{ background: tag.color }}>
+                        {tag.name}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
               </div>
-              <div className="main-box__creator">
-                <UserProfileLink user={creator} layout="creator" />
-                <time className="main-box__creator-date" dateTime={createdAt}>
-                  {formatDate(createdAt)}
-                </time>
+
+              <IssueCreatorCard creator={creator} createdAt={createdAt} />
+            </div>
+
+            <div className="issue-text-block">
+              <h3 className="issue-section-heading">Description</h3>
+              <div
+                className={`issue-description-body${issue.description ? "" : " issue-description-body--empty"}`}
+              >
+                {issue.description || "Empty space is so boring... go on, be descriptive..."}
               </div>
-            </header>
-            <p className="issue-detail-description">{issue.description || "Without description."}</p>
+            </div>
           </section>
 
-          <section className="panel">
-            <h2>Attachments</h2>
-            <p>
+          <section className="panel issue-section-panel">
+            <div className="detail-box-header">
+              <h2>Attachments</h2>
+            </div>
+
+            <div className="upload-inline">
+              <input
+                ref={attachmentFileInputRef}
+                type="file"
+                accept={ATTACHMENT_ACCEPT}
+                aria-label="Select file to upload"
+                onChange={(event) => void handleAttachmentFileChange(event)}
+              />
+              <button
+                className="btn btn-primary btn-plus"
+                type="button"
+                disabled={attachmentUploadLoading}
+                onClick={() => attachmentFileInputRef.current?.click()}
+                aria-label="Add attachment"
+                title="Add attachment"
+              >
+                +
+              </button>
+            </div>
+            <div className="attachment-sub">
               {ATTACHMENT_HELP_FORMATS} {ATTACHMENT_HELP_MAX_SIZE}
-            </p>
-            <div className="attachment-list">
-              {attachmentsState.loading ? (
-                <p className="muted">Loading attachments...</p>
-              ) : attachmentsState.error ? (
-                <p className="form-error">{attachmentsState.error.message}</p>
-              ) : attachmentItems.length > 0 ? (
-                attachmentItems.map((attachment) => {
+            </div>
+
+            {attachmentUploadError ? <div className="comment-error">{attachmentUploadError}</div> : null}
+
+            {attachmentsState.loading ? (
+              <p className="comment-empty">Loading attachments...</p>
+            ) : attachmentsState.error ? (
+              <p className="comment-error">{attachmentsState.error.message}</p>
+            ) : attachmentItems.length > 0 ? (
+              <div className="comments-list comments-list-top">
+                {attachmentItems.map((attachment) => {
                   const canDelete = isAttachmentOwner(attachment, currentUsername);
                   const isDeleting = String(deletingAttachmentId) === String(attachment.id);
 
                   return (
-                    <article className="attachment-item" key={attachment.id}>
-                      <div className="attachment-item__body">
-                        {attachment.file_url ? (
-                          <a
-                            className="attachment-item__link"
-                            href={attachment.file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title="Open or download the file"
-                          >
-                            {attachment.file_name}
-                          </a>
-                        ) : (
-                          <span className="attachment-item__name">{attachment.file_name}</span>
-                        )}
-                        {attachment.uploaded_at ? (
-                          <p className="attachment-item__meta">
-                            <time dateTime={attachment.uploaded_at}>{formatDate(attachment.uploaded_at)}</time>
-                            {attachment.uploaded_by?.username ? (
-                              <>
-                                {" · "}
-                                <UserProfileLink user={attachment.uploaded_by} layout="mention" />
-                              </>
-                            ) : null}
-                          </p>
-                        ) : null}
-                      </div>
-                      {canDelete ? (
-                        <button
-                          className="button attachment-item__delete"
-                          type="button"
-                          disabled={deletingAttachmentId !== null}
-                          onClick={() => void removeAttachment(attachment.id)}
-                        >
-                          {isDeleting ? "Deleting..." : "Delete"}
-                        </button>
-                      ) : null}
-                    </article>
+                    <AttachmentItem
+                      key={attachment.id}
+                      attachment={attachment}
+                      canDelete={canDelete}
+                      isDeleting={isDeleting}
+                      onRemove={() => void removeAttachment(attachment.id)}
+                    />
                   );
-                })
-              ) : (
-                <p className="muted">There are no attachments yet.</p>
-              )}
-            </div>
-            <input
-              ref={attachmentFileInputRef}
-              type="file"
-              className="issue-detail-attachment-file-input"
-              accept={ATTACHMENT_ACCEPT}
-              aria-label="Select file to upload"
-              onChange={(event) => void handleAttachmentFileChange(event)}
-            />
-            {attachmentUploadError ? (
-              <p className="form-error issue-detail-attachment-upload-error">{attachmentUploadError}</p>
-            ) : null}
-            <button
-              className="button button-primary"
-              type="button"
-              disabled={attachmentUploadLoading}
-              onClick={() => attachmentFileInputRef.current?.click()}
-            >
-              {attachmentUploadLoading ? "Uploading..." : "Upload"}
-            </button>
+                })}
+              </div>
+            ) : (
+              <div className="attachment-empty attachment-empty-top">
+                No attachments yet. Use + to upload the first file.
+              </div>
+            )}
           </section>
 
-          <section className="panel">
-            <div className="discussion-tabs" role="tablist" aria-label="Discussions">
+          <section className="panel issue-section-panel">
+            <div className="detail-box-header">
+              <h2>Discussion</h2>
+            </div>
+
+            <div className="detail-tabs" role="tablist" aria-label="Discussion sections">
               <button
-                className={`discussion-tab${discussionView === "comments" ? " discussion-tab--active" : ""}`}
+                className={`detail-tab${discussionView === "comments" ? " active" : ""}`}
                 type="button"
                 role="tab"
                 aria-selected={discussionView === "comments"}
@@ -563,7 +668,7 @@ export function IssueDetailPage() {
                 Comments
               </button>
               <button
-                className={`discussion-tab${discussionView === "activities" ? " discussion-tab--active" : ""}`}
+                className={`detail-tab${discussionView === "activities" ? " active" : ""}`}
                 type="button"
                 role="tab"
                 aria-selected={discussionView === "activities"}
@@ -573,66 +678,76 @@ export function IssueDetailPage() {
               </button>
             </div>
 
-            {discussionView === "comments" ? (
-              <div className="discussion-panel" id="comments" role="tabpanel">
-                <form className="comment-form" onSubmit={submitComment}>
-                  <textarea
-                    value={comment}
-                    onChange={(event) => setComment(event.target.value)}
-                    placeholder="Write a comment..."
-                  />
-                  <button className="button button-primary" type="submit">
-                    Publish
-                  </button>
-                </form>
-                {commentActionError ? <p className="form-error comment-action-error">{commentActionError}</p> : null}
-                <div className="comment-list">
+            <div className="discussion-body">
+              {discussionView === "comments" ? (
+                <>
+                  <div className="detail-box-header detail-box-header--tight">
+                    <h2>Add a comment</h2>
+                  </div>
+
+                  <form className="comment-form" onSubmit={submitComment}>
+                    <textarea
+                      value={comment}
+                      onChange={(event) => setComment(event.target.value)}
+                      placeholder="Type a new comment here"
+                    />
+                    {commentActionError && !editingCommentId ? (
+                      <div className="comment-error">{commentActionError}</div>
+                    ) : null}
+                    <div className="form-actions comment-submit-actions">
+                      <button className="btn btn-primary" type="submit">
+                        Add comment
+                      </button>
+                    </div>
+                  </form>
+
                   {commentsState.loading ? (
-                    <p className="muted">Loading comments...</p>
+                    <p className="comment-empty">Loading comments...</p>
                   ) : commentsState.error ? (
-                    <p className="form-error">{commentsState.error.message}</p>
+                    <p className="comment-error">{commentsState.error.message}</p>
                   ) : commentList.length > 0 ? (
-                    commentList.map((item) => (
-                      <CommentItem
-                        key={item.id}
-                        comment={item}
-                        isOwner={isCommentOwner(item)}
-                        isEditing={String(editingCommentId) === String(item.id)}
-                        editingContent={editingCommentContent}
-                        onEditingContentChange={setEditingCommentContent}
-                        actionLoading={commentActionLoading}
-                        onStartEdit={() => startEditingComment(item)}
-                        onCancelEdit={cancelEditingComment}
-                        onSaveEdit={() => void saveEditedComment(item.id)}
-                        onRemove={() => void removeComment(item.id)}
-                      />
-                    ))
+                    <div className="comments-list comments-list-top">
+                      {commentList.map((item) => (
+                        <CommentItem
+                          key={item.id}
+                          comment={item}
+                          isOwner={isCommentOwner(item)}
+                          isEditing={String(editingCommentId) === String(item.id)}
+                          editingContent={editingCommentContent}
+                          onEditingContentChange={setEditingCommentContent}
+                          actionLoading={commentActionLoading}
+                          commentActionError={
+                            String(editingCommentId) === String(item.id) ? commentActionError : ""
+                          }
+                          onStartEdit={() => startEditingComment(item)}
+                          onCancelEdit={cancelEditingComment}
+                          onSaveEdit={() => void saveEditedComment(item.id)}
+                          onRemove={() => void removeComment(item.id)}
+                        />
+                      ))}
+                    </div>
                   ) : (
-                    <p className="muted">There are no comments yet.</p>
+                    <p className="comment-empty">No comments yet.</p>
                   )}
+                </>
+              ) : activitiesState.loading ? (
+                <p className="comment-empty">Loading activities...</p>
+              ) : activitiesState.error ? (
+                <p className="comment-error">{activitiesState.error.message}</p>
+              ) : activities.length > 0 ? (
+                <div className="comments-list comments-list-top">
+                  {activities.map((item) => (
+                    <ActivityItem key={item.id} activity={item} />
+                  ))}
                 </div>
-              </div>
-            ) : (
-              <div className="discussion-panel" role="tabpanel">
-                <div className="comment-list">
-                  {activitiesState.loading ? (
-                    <p className="muted">Loading activities...</p>
-                  ) : activitiesState.error ? (
-                    <p className="form-error">{activitiesState.error.message}</p>
-                  ) : activities.length > 0 ? (
-                    activities.map((item) => <ActivityItem key={item.id} activity={item} />)
-                  ) : (
-                    <p className="muted">There is no activity yet.</p>
-                  )}
-                </div>
-              </div>
-            )}
+              ) : (
+                <p className="comment-empty">No activity yet.</p>
+              )}
+            </div>
           </section>
         </div>
-      </section>
 
-      <aside className="right-panel">
-        <section className="panel issue-sidebar-panel" aria-label="Issue metadata">
+        <aside className="panel issue-sidebar-panel" aria-label="Issue metadata">
           <section className="issue-sidebar-status">
             <p className="issue-sidebar-kicker">Status</p>
             <div className="issue-sidebar-status-row">
@@ -650,7 +765,7 @@ export function IssueDetailPage() {
               <IssueMetaRow label="Priority" value={issue.priority?.name} color={issue.priority?.color} />
               <IssueMetaRow
                 label="Deadline"
-                value={formatSidebarDateTime(issue.deadline)}
+                value={formatDate(issue.deadline)}
                 color={issue.deadline_color}
                 soft={!issue.deadline}
               />
@@ -662,12 +777,12 @@ export function IssueDetailPage() {
             <div className="issue-people-header">
               <h3 className="issue-sidebar-title">Assigned</h3>
               <button
-                className={`button issue-people-action${isAssignedToMe ? " button-danger-outline" : " button-primary"}`}
+                className={`btn btn-sm issue-people-action${isAssignedToMe ? " btn-delete" : " btn-edit"}`}
                 type="button"
                 disabled={lateralLoading}
                 onClick={() => void toggleAssignToMe()}
               >
-                {isAssignedToMe ? "Unassign" : "Assign me"}
+                {isAssignedToMe ? "Unassign" : "Assign to me"}
               </button>
             </div>
 
@@ -706,7 +821,7 @@ export function IssueDetailPage() {
             </details>
             <div className="issue-people-apply-row">
               <button
-                className="button issue-list-secondary-button"
+                className="btn btn-secondary btn-sm issue-people-apply"
                 type="button"
                 disabled={lateralLoading || usersState.loading}
                 onClick={() => void applyAssignees()}
@@ -720,12 +835,12 @@ export function IssueDetailPage() {
             <div className="issue-people-header">
               <h3 className="issue-sidebar-title">Watchers</h3>
               <button
-                className={`button issue-people-action${isWatching ? " button-danger-outline" : " button-primary"}`}
+                className={`btn btn-sm issue-people-action${isWatching ? " btn-delete" : " btn-edit"}`}
                 type="button"
                 disabled={lateralLoading}
                 onClick={() => void toggleWatch()}
               >
-                {isWatching ? "Unwatch" : "Watch me"}
+                {isWatching ? "Unwatch" : "Watch"}
               </button>
             </div>
 
@@ -764,7 +879,7 @@ export function IssueDetailPage() {
             </details>
             <div className="issue-people-apply-row">
               <button
-                className="button issue-list-secondary-button"
+                className="btn btn-secondary btn-sm issue-people-apply"
                 type="button"
                 disabled={lateralLoading || usersState.loading}
                 onClick={() => void applyWatchers()}
@@ -774,20 +889,16 @@ export function IssueDetailPage() {
             </div>
           </section>
 
-          {lateralError ? <p className="form-error issue-sidebar-error">{lateralError}</p> : null}
+          {lateralError ? <p className="comment-error issue-sidebar-error">{lateralError}</p> : null}
 
           {isIssueCreator ? (
             <section className="issue-sidebar-section">
               <div className="issue-owner-actions">
-                <button
-                  className="button button-primary"
-                  type="button"
-                  onClick={() => navigate(`/issues/${issueId}/edit`)}
-                >
+                <button className="btn btn-edit" type="button" onClick={() => navigate(`/issues/${issueId}/edit`)}>
                   Edit issue
                 </button>
                 <button
-                  className="button button-danger"
+                  className="btn btn-delete"
                   type="button"
                   disabled={issueDeleteLoading}
                   onClick={() => void deleteIssueAndLeave()}
@@ -795,11 +906,11 @@ export function IssueDetailPage() {
                   {issueDeleteLoading ? "Deleting..." : "Delete"}
                 </button>
               </div>
-              {issueDeleteError ? <p className="form-error">{issueDeleteError}</p> : null}
+              {issueDeleteError ? <p className="comment-error">{issueDeleteError}</p> : null}
             </section>
           ) : null}
-        </section>
-      </aside>
+        </aside>
+      </div>
     </IssueDetailWorkspace>
   );
 }
