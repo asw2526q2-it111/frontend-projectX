@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { AppLayout } from "./layouts/AppLayout";
 import { IssueCreatePage } from "./pages/IssueCreatePage";
 import { IssueDetailPage } from "./pages/IssueDetailPage";
+import { IssueEditPage } from "./pages/IssueEditPage";
 import { IssuesPage } from "./pages/IssuesPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { ProfilePage } from "./pages/ProfilePage";
@@ -13,6 +14,7 @@ export default function App() {
     <Routes>
       <Route path="/issues" element={<IssuesPage />} />
       <Route path="/issues/new" element={<IssueCreatePage />} />
+      <Route path="/issues/:issueId/edit" element={<IssueEditPage />} />
       <Route path="/issues/:issueId" element={<IssueDetailPage />} />
       <Route path="/bulk-insert" element={<BulkInsertPage />} />
       <Route path="/profile/:username" element={<ProfilePage />} />
