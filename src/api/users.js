@@ -1,18 +1,8 @@
-// 1. Obtener los detalles de un usuario concreto (LA QUE FALTABA)
+import { apiRequest } from "./client";
+import { normalizePagedList } from "../utils/apiList";
+
 export async function getUser(apiKey, username) {
-  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/users/${username}/`, {
-    method: "GET",
-    headers: {
-      "X-API-Key": apiKey,
-      "Content-Type": "application/json",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error("No s'ha pogut carregar el perfil de l'usuari");
-  }
-
-  return response.json();
+  return apiRequest(`/api/users/${username}/`, { apiKey });
 }
 
 // 2. Actualizar el perfil
@@ -32,26 +22,21 @@ export async function updateUserProfile(apiKey, username, data) {
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.detail || "Error al actualizar el perfil");
+    throw new Error(errorData.detail || "Could not update the profile");
   }
 
   return response.json();
 }
 
-// 3. Listar todos los usuarios
 export async function listUsers(apiKey) {
-  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/users/`, {
-    method: "GET",
-    headers: {
-      "X-API-Key": apiKey,
-      "Content-Type": "application/json",
-    },
-  });
+  const data = await apiRequest("/api/users/", { apiKey });
+  return normalizePagedList(data);
+}
 
-  if (!response.ok) {
-    throw new Error("Error en llistar els usuaris");
-  }
+export function getUserIssues(apiKey, username, type, query = {}) {
+  return apiRequest(`/api/users/${username}/${type}/`, { apiKey, query });
+}
 
-  const data = await response.json();
-  return data.results || data;
+export function getUserComments(apiKey, username) {
+  return apiRequest(`/api/users/${username}/comments/`, { apiKey });
 }

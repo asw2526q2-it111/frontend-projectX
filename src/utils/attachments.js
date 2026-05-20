@@ -13,6 +13,10 @@ export const ATTACHMENT_HELP_MAX_SIZE = "Max size: 10 MB.";
 
 export const normalizeAttachmentList = normalizePagedList;
 
+export function isAttachmentOwner(attachment, currentUsername) {
+  return attachment.uploaded_by?.username === currentUsername;
+}
+
 /**
  * Llegeix el fitxer de l'input, el buida per permetre tornar a triar el mateix fitxer,
  * i retorna el resultat de validació.
@@ -24,7 +28,7 @@ export function prepareIssueAttachmentUpload(event) {
   input.value = "";
   if (!file) return { kind: "noop" };
   if (file.size > ATTACHMENT_MAX_BYTES) {
-    return { kind: "invalid", message: "El fitxer supera el límit de 10 MB." };
+    return { kind: "invalid", message: "The file exceeds the 10 MB limit." };
   }
   return { kind: "ok", file };
 }

@@ -1,19 +1,18 @@
 import { useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { getUser } from "../api/users";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingState } from "../components/LoadingState";
 import { useCurrentUser } from "../context/currentUser";
 import { useAsync } from "../hooks/useAsync";
-import { FRONTEND_USERS } from "../config/users"; 
 import { UserSwitcher } from "../components/UserSwitcher"; 
+import { ProfileCommentsList } from "../components/ProfileCommentsList";
 import { ProfileIssuesTable } from "../components/ProfileIssuesTable";
 import "../styles/profile.css";
 
 export function ProfilePage() {
   const { username } = useParams();
   const { currentUser } = useCurrentUser();
-  const navigate = useNavigate();
   const isOwnProfile = currentUser?.username === username;
   const [activeTab, setActiveTab] = useState("assigned");
 
@@ -29,8 +28,8 @@ export function ProfilePage() {
   if (userState.error || !userState.data) {
     return (
       <EmptyState
-        title="No s'ha pogut carregar el perfil"
-        description={userState.error?.message ?? "Usuari no trobat."}
+        title="The profile couldn't be loaded"
+        description={userState.error?.message ?? "User not found."}
       />
     );
   }
@@ -51,7 +50,7 @@ export function ProfilePage() {
         <div className="topbar-actions" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <UserSwitcher />
           
-          <Link className="btn btn-secondary" to="/issues" style={{ padding: '0.6rem 0.85rem', border: '1px solid #dde6ee', borderRadius: '0.7rem', textDecoration: 'none', color: '#1f2d3d', fontWeight: '600' }}>
+          <Link className="btn btn-secondary" to="/issues">
             &larr; Back to issues
           </Link>
         </div>
@@ -100,7 +99,7 @@ export function ProfilePage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '1.5rem' }}>
                 {/* Envolvemos el botón con el Link hacia la ruta de edición */}
                 <Link to={`/profile/${username}/edit`} style={{ textDecoration: 'none' }}>
-                  <button style={{ width: '100%', padding: '0.6rem', background: '#0d8aa8', color: 'white', border: 'none', borderRadius: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}>
+                  <button className="btn" style={{ width: '100%' }} type="button">
                     Edit Profile
                   </button>
                 </Link>
@@ -127,20 +126,18 @@ export function ProfilePage() {
           <div className="profile-content-body">
             {activeTab === "assigned" && (
               <div className="issues-table-wrap">
-                <ProfileIssuesTable username={username} type="assigned" />
+                <ProfileIssuesTable username={username} type="assigned" profileUser={user} />
               </div>
             )}
             
             {activeTab === "watched" && (
               <div className="issues-table-wrap">
-                <ProfileIssuesTable username={username} type="watched" />
+                <ProfileIssuesTable username={username} type="watched" profileUser={user} />
               </div>
             )}
 
             {activeTab === "comments" && (
-              <div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>
-                No comments yet.
-              </div>
+              <ProfileCommentsList username={username} />
             )}
           </div>
         </section>

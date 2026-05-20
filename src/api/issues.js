@@ -1,20 +1,9 @@
 import { apiRequest } from "./client";
 
 export function listIssues(apiKey, filters = {}) {
-  const query = {
-    ...filters,
-    q: filters.search ?? filters.q,
-    sort: filters.sort_by ?? filters.sort,
-    dir: filters.sort_direction ?? filters.dir,
-  };
-
-  delete query.search;
-  delete query.sort_by;
-  delete query.sort_direction;
-
   return apiRequest("/api/issues/", {
     apiKey,
-    query,
+    query: filters,
   });
 }
 
@@ -63,7 +52,7 @@ export function assignMe(apiKey, issueId) {
 export function unassignMe(apiKey, issueId) {
   return apiRequest(`/api/issues/${issueId}/unassign-me/`, {
     apiKey,
-    method: "POST",
+    method: "DELETE",
   });
 }
 
@@ -77,8 +66,36 @@ export function watchIssue(apiKey, issueId) {
 export function unwatchIssue(apiKey, issueId) {
   return apiRequest(`/api/issues/${issueId}/unwatch/`, {
     apiKey,
-    method: "POST",
+    method: "DELETE",
   });
+}
+
+export function applyIssueAssignees(apiKey, issueId, assigneeUsername) {
+  return apiRequest(`/api/issues/${issueId}/assignees/apply/`, {
+    apiKey,
+    method: "POST",
+    body: JSON.stringify({
+      assignee_username: assigneeUsername || null,
+    }),
+  });
+}
+
+export function applyIssueWatchers(apiKey, issueId, watcherUsernames) {
+  return apiRequest(`/api/issues/${issueId}/watchers/apply/`, {
+    apiKey,
+    method: "POST",
+    body: JSON.stringify({
+      watcher_usernames: watcherUsernames,
+    }),
+  });
+}
+
+export function applyAssignee(apiKey, issueId, assigneeUsername) {
+  return applyIssueAssignees(apiKey, issueId, assigneeUsername);
+}
+
+export function applyWatchers(apiKey, issueId, watcherUsernames) {
+  return applyIssueWatchers(apiKey, issueId, watcherUsernames);
 }
 
 export function createIssueComment(apiKey, issueId, content) {
@@ -108,6 +125,10 @@ export function getIssueActivities(apiKey, issueId) {
   return apiRequest(`/api/issues/${issueId}/activities/`, { apiKey });
 }
 
+export function listIssueActivities(apiKey, issueId) {
+  return getIssueActivities(apiKey, issueId);
+}
+
 export function getUserAvatar(apiKey, username) {
   return apiRequest(`/api/users/${username}/avatar/`, { apiKey });
 }
@@ -118,7 +139,7 @@ export function getIssueAttachments(apiKey, issueId) {
 
 export function createIssueAttachment(apiKey, issueId, file) {
   const body = new FormData();
-  body.append("file", file);
+  body.append("attachment", file);
   return apiRequest(`/api/issues/${issueId}/attachments/`, {
     apiKey,
     method: "POST",
@@ -126,6 +147,17 @@ export function createIssueAttachment(apiKey, issueId, file) {
   });
 }
 
+export function deleteIssueAttachment(apiKey, attachmentId) {
+  return apiRequest(`/api/attachments/${attachmentId}/`, {
+    apiKey,
+    method: "DELETE",
+  });
+}
+
 export function getIssueComments(apiKey, issueId) {
   return apiRequest(`/api/issues/${issueId}/comments/`, { apiKey });
+}
+
+export function listIssueComments(apiKey, issueId) {
+  return getIssueComments(apiKey, issueId);
 }
