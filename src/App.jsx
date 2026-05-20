@@ -8,6 +8,7 @@ import { NotFoundPage } from "./pages/NotFoundPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { ProfileEditPage } from "./pages/ProfileEditPage";
 import { BulkInsertPage } from "./pages/BulkInsertPage";
+import { SettingsPage } from "./pages/SettingsPage";
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
       <Route path="/issues/:issueId/edit" element={<IssueEditPage />} />
       <Route path="/issues/:issueId" element={<IssueDetailPage />} />
       <Route path="/bulk-insert" element={<BulkInsertPage />} />
+      <Route path="/settings" element={<SettingsPage />} />
       <Route path="/profile/:username" element={<ProfilePage />} />
       <Route path="/profile/:username/edit" element={<ProfileEditPage />} />
 

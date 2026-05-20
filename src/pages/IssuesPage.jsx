@@ -389,10 +389,10 @@ export function IssuesPage() {
 
           <section className="panel catalog-panel catalog-panel-centered">
             <h2 className="catalog-title">Configuration Hub</h2>
-            <button className="button catalog-settings-btn btn-full-center" type="button">
+            <Link className="button catalog-settings-btn btn-full-center" to="/settings">
               <Settings2 size={16} aria-hidden="true" />
               Open Settings
-            </button>
+            </Link>
           </section>
         </aside>
       </main>
