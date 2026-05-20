@@ -171,11 +171,7 @@ function ActivityItem({ activity }) {
 
 function IssueDetailWorkspace({ headerSubtitle, headerUser, children }) {
   const { currentUser } = useCurrentUser();
-  const topbarUser =
-    headerUser ?? {
-      username: currentUser.username,
-      full_name: currentUser.fullName,
-    };
+  const topbarUser = headerUser ?? currentUser;
 
   return (
     <IssueWorkspaceShell pageClassName="issue-workspace issue-detail-page">

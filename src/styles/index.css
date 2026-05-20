@@ -1270,6 +1270,16 @@ img.profile-avatar-large {
   border-radius: 10px;
 }
 
+.issue-workspace .recent-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 14px;
+  padding: 8px 10px;
+  border: 1px solid #dde6ee;
+  border-radius: 10px;
+}
+
 .issue-workspace .filter-group {
   margin-bottom: 10px;
 }
