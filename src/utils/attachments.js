@@ -13,6 +13,10 @@ export const ATTACHMENT_HELP_MAX_SIZE = "Max size: 10 MB.";
 
 export const normalizeAttachmentList = normalizePagedList;
 
+export function isAttachmentOwner(attachment, currentUsername) {
+  return attachment.uploaded_by?.username === currentUsername;
+}
+
 /**
  * Llegeix el fitxer de l'input, el buida per permetre tornar a triar el mateix fitxer,
  * i retorna el resultat de validació.
