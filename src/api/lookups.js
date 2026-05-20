@@ -20,10 +20,11 @@ export function updateLookup(apiKey, resource, lookupName, payload) {
   });
 }
 
-export function deleteLookup(apiKey, resource, lookupName) {
+export function deleteLookup(apiKey, resource, lookupName, replacementName) {
   return apiRequest(`/api/${resource}/${encodeURIComponent(lookupName)}/`, {
     apiKey,
     method: "DELETE",
+    query: replacementName ? { replacement_name: replacementName } : undefined,
   });
 }
 
