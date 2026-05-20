@@ -48,7 +48,7 @@ export async function apiRequest(path, options = {}) {
     });
   } catch (error) {
     throw new ApiError(
-      `No s'ha pogut connectar amb l'API a ${requestUrl}. Revisa la URL base, que el backend estigui actiu i la configuracio CORS.`,
+      `Could not connect to the API at ${requestUrl}. Check the base URL, make sure the backend is running, and verify the CORS configuration.`,
       0,
       error instanceof Error ? error.message : String(error)
     );

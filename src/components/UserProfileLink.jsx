@@ -16,7 +16,7 @@ export function UserProfileLink({
   if (!user?.username) return null;
 
   const profilePath = `/profile/${user.username}`;
-  const title = `Veure el perfil de ${user.username}`;
+  const title = `View ${user.username}'s profile`;
   const displayName = getUserDisplayName(user) || user.username;
 
   if (layout === "mention") {

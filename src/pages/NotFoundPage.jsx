@@ -5,11 +5,11 @@ export function NotFoundPage() {
   return (
     <section className="compact-page">
       <EmptyState
-        title="Pagina no trobada"
-        description="La ruta que has obert no existeix en aquest client."
+        title="Page not found"
+        description="The route you opened does not exist in this client."
       />
       <Link className="button button-primary" to="/issues">
-        Anar a issues
+        Go to issues
       </Link>
     </section>
   );

@@ -73,7 +73,7 @@ function CommentItem({
                 disabled={actionLoading}
                 onClick={onStartEdit}
               >
-                Editar
+                Edit
               </button>
               <button
                 className="button comment-item__action comment-item__action--danger"
@@ -81,7 +81,7 @@ function CommentItem({
                 disabled={actionLoading}
                 onClick={onRemove}
               >
-                Eliminar
+                Delete
               </button>
             </div>
           ) : null}
@@ -92,7 +92,7 @@ function CommentItem({
           <textarea
             value={editingContent}
             onChange={(event) => onEditingContentChange(event.target.value)}
-            aria-label="Editar comentari"
+            aria-label="Edit comment"
           />
           <div className="comment-item__edit-actions">
             <button
@@ -101,7 +101,7 @@ function CommentItem({
               disabled={actionLoading}
               onClick={onSaveEdit}
             >
-              Guardar
+              Save
             </button>
             <button
               className="button"
@@ -109,7 +109,7 @@ function CommentItem({
               disabled={actionLoading}
               onClick={onCancelEdit}
             >
-              Cancelar
+              Cancel
             </button>
           </div>
         </div>
@@ -146,7 +146,7 @@ function UserPickerOption({ user, inputType, name, checked, onChange }) {
 
 function ActivityItem({ activity }) {
   const author = getActivityActor(activity);
-  const authorName = author ? author.full_name ?? author.username : "Sistema";
+  const authorName = author ? author.full_name ?? author.username : "System";
 
   return (
     <article className="comment-item">
@@ -273,7 +273,7 @@ export function IssueDetailPage() {
   async function saveEditedComment(commentId) {
     const content = editingCommentContent.trim();
     if (!content) {
-      setCommentActionError("El comentari no pot estar buit.");
+      setCommentActionError("The comment cannot be empty.");
       return;
     }
 
@@ -284,14 +284,14 @@ export function IssueDetailPage() {
       cancelEditingComment();
       await reloadDiscussion();
     } catch (error) {
-      setCommentActionError(getApiActionErrorMessage(error, "No s'ha pogut guardar el comentari."));
+      setCommentActionError(getApiActionErrorMessage(error, "The comment couldn't be saved."));
     } finally {
       setCommentActionLoading(false);
     }
   }
 
   async function removeComment(commentId) {
-    if (!window.confirm("Vols eliminar aquest comentari?")) return;
+    if (!window.confirm("Do you want to delete this comment?")) return;
 
     setCommentActionLoading(true);
     setCommentActionError("");
@@ -300,7 +300,7 @@ export function IssueDetailPage() {
       if (String(editingCommentId) === String(commentId)) cancelEditingComment();
       await reloadDiscussion();
     } catch (error) {
-      setCommentActionError(getApiActionErrorMessage(error, "No s'ha pogut eliminar el comentari."));
+      setCommentActionError(getApiActionErrorMessage(error, "The comment couldn't be deleted."));
     } finally {
       setCommentActionLoading(false);
     }
@@ -324,14 +324,14 @@ export function IssueDetailPage() {
         reloadActivities: activitiesState.reload,
       });
     } catch (error) {
-      setAttachmentUploadError(getApiActionErrorMessage(error, "No s'ha pogut pujar el fitxer."));
+      setAttachmentUploadError(getApiActionErrorMessage(error, "The file couldn't be uploaded."));
     } finally {
       setAttachmentUploadLoading(false);
     }
   }
 
   async function removeAttachment(attachmentId) {
-    if (!window.confirm("Vols eliminar aquest adjunt?")) return;
+    if (!window.confirm("Do you want to delete this attachment?")) return;
 
     setAttachmentUploadError("");
     setDeletingAttachmentId(attachmentId);
@@ -339,7 +339,7 @@ export function IssueDetailPage() {
       await deleteIssueAttachment(apiKey, attachmentId);
       await Promise.all([attachmentsState.reload(), activitiesState.reload()]);
     } catch (error) {
-      setAttachmentUploadError(getApiActionErrorMessage(error, "No s'ha pogut eliminar l'adjunt."));
+      setAttachmentUploadError(getApiActionErrorMessage(error, "The attachment couldn't be deleted."));
     } finally {
       setDeletingAttachmentId(null);
     }
@@ -367,7 +367,7 @@ export function IssueDetailPage() {
     const isAssigned = issue?.assignee?.username === currentUsername;
     await runLateralAction(
       () => (isAssigned ? unassignMe(apiKey, issueId) : assignMe(apiKey, issueId)),
-      "No s'ha pogut actualitzar l'assignacio."
+      "The assignment couldn't be updated."
     );
   }
 
@@ -375,21 +375,21 @@ export function IssueDetailPage() {
     const isWatching = (issue?.watchers ?? []).some((watcher) => watcher.username === currentUsername);
     await runLateralAction(
       () => (isWatching ? unwatchIssue(apiKey, issueId) : watchIssue(apiKey, issueId)),
-      "No s'ha pogut actualitzar els watchers."
+      "The watchers couldn't be updated."
     );
   }
 
   async function applyAssignees() {
     await runLateralAction(
       () => applyIssueAssignees(apiKey, issueId, draftAssigneeUsername),
-      "No s'ha pogut aplicar l'assignat."
+      "The assignee couldn't be applied."
     );
   }
 
   async function applyWatchers() {
     await runLateralAction(
       () => applyIssueWatchers(apiKey, issueId, draftWatcherUsernames),
-      "No s'ha pogut aplicar els watchers."
+      "The watchers couldn't be applied."
     );
   }
 
@@ -402,7 +402,7 @@ export function IssueDetailPage() {
   }
 
   async function deleteIssueAndLeave() {
-    if (!window.confirm("Segur que vols eliminar aquesta issue?")) return;
+    if (!window.confirm("Are you sure you want to delete this issue?")) return;
 
     setIssueDeleteError("");
     setIssueDeleteLoading(true);
@@ -410,7 +410,7 @@ export function IssueDetailPage() {
       await deleteIssue(apiKey, issueId);
       navigate("/issues");
     } catch (error) {
-      setIssueDeleteError(getApiActionErrorMessage(error, "No s'ha pogut eliminar la issue."));
+      setIssueDeleteError(getApiActionErrorMessage(error, "The issue couldn't be deleted."));
     } finally {
       setIssueDeleteLoading(false);
     }
@@ -418,7 +418,7 @@ export function IssueDetailPage() {
 
   if (issueState.loading && !issue) {
     return (
-      <IssueDetailWorkspace headerSubtitle="Carregant issue...">
+      <IssueDetailWorkspace headerSubtitle="Loading issue...">
         <section className="content panel issue-detail-content">
           <LoadingState />
         </section>
@@ -431,7 +431,7 @@ export function IssueDetailPage() {
       <IssueDetailWorkspace headerSubtitle="Issue no disponible">
         <section className="content panel issue-detail-content">
           <EmptyState
-            title="No s'ha pogut carregar la issue"
+            title="The issue couldn't be loaded"
             description={issueState.error?.message ?? "Issue no trobada."}
           />
         </section>
@@ -467,7 +467,7 @@ export function IssueDetailPage() {
                 </time>
               </div>
             </header>
-            <p className="issue-detail-description">{issue.description || "Sense descripcio."}</p>
+            <p className="issue-detail-description">{issue.description || "Without description."}</p>
           </section>
 
           <section className="panel">
@@ -477,7 +477,7 @@ export function IssueDetailPage() {
             </p>
             <div className="attachment-list">
               {attachmentsState.loading ? (
-                <p className="muted">Carregant adjunts...</p>
+                <p className="muted">Loading attachments...</p>
               ) : attachmentsState.error ? (
                 <p className="form-error">{attachmentsState.error.message}</p>
               ) : attachmentItems.length > 0 ? (
@@ -494,7 +494,7 @@ export function IssueDetailPage() {
                             href={attachment.file_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            title="Obrir o descarregar el fitxer"
+                            title="Open or download the file"
                           >
                             {attachment.file_name}
                           </a>
@@ -520,14 +520,14 @@ export function IssueDetailPage() {
                           disabled={deletingAttachmentId !== null}
                           onClick={() => void removeAttachment(attachment.id)}
                         >
-                          {isDeleting ? "Eliminant..." : "Eliminar"}
+                          {isDeleting ? "Deleting..." : "Delete"}
                         </button>
                       ) : null}
                     </article>
                   );
                 })
               ) : (
-                <p className="muted">No hi ha fitxers adjunts.</p>
+                <p className="muted">There are no attachments yet.</p>
               )}
             </div>
             <input
@@ -535,7 +535,7 @@ export function IssueDetailPage() {
               type="file"
               className="issue-detail-attachment-file-input"
               accept={ATTACHMENT_ACCEPT}
-              aria-label="Seleccionar fitxer per pujar"
+              aria-label="Select file to upload"
               onChange={(event) => void handleAttachmentFileChange(event)}
             />
             {attachmentUploadError ? (
@@ -547,7 +547,7 @@ export function IssueDetailPage() {
               disabled={attachmentUploadLoading}
               onClick={() => attachmentFileInputRef.current?.click()}
             >
-              {attachmentUploadLoading ? "Pujant..." : "Upload"}
+              {attachmentUploadLoading ? "Uploading..." : "Upload"}
             </button>
           </section>
 
@@ -560,7 +560,7 @@ export function IssueDetailPage() {
                 aria-selected={discussionView === "comments"}
                 onClick={() => setDiscussionView("comments")}
               >
-                Comentaris
+                Comments
               </button>
               <button
                 className={`discussion-tab${discussionView === "activities" ? " discussion-tab--active" : ""}`}
@@ -569,26 +569,26 @@ export function IssueDetailPage() {
                 aria-selected={discussionView === "activities"}
                 onClick={() => setDiscussionView("activities")}
               >
-                Activitats
+                Activities
               </button>
             </div>
 
             {discussionView === "comments" ? (
-              <div className="discussion-panel" role="tabpanel">
+              <div className="discussion-panel" id="comments" role="tabpanel">
                 <form className="comment-form" onSubmit={submitComment}>
                   <textarea
                     value={comment}
                     onChange={(event) => setComment(event.target.value)}
-                    placeholder="Escriu un comentari"
+                    placeholder="Write a comment..."
                   />
                   <button className="button button-primary" type="submit">
-                    Publicar
+                    Publish
                   </button>
                 </form>
                 {commentActionError ? <p className="form-error comment-action-error">{commentActionError}</p> : null}
                 <div className="comment-list">
                   {commentsState.loading ? (
-                    <p className="muted">Carregant comentaris...</p>
+                    <p className="muted">Loading comments...</p>
                   ) : commentsState.error ? (
                     <p className="form-error">{commentsState.error.message}</p>
                   ) : commentList.length > 0 ? (
@@ -608,7 +608,7 @@ export function IssueDetailPage() {
                       />
                     ))
                   ) : (
-                    <p className="muted">Encara no hi ha comentaris.</p>
+                    <p className="muted">There are no comments yet.</p>
                   )}
                 </div>
               </div>
@@ -616,13 +616,13 @@ export function IssueDetailPage() {
               <div className="discussion-panel" role="tabpanel">
                 <div className="comment-list">
                   {activitiesState.loading ? (
-                    <p className="muted">Carregant activitats...</p>
+                    <p className="muted">Loading activities...</p>
                   ) : activitiesState.error ? (
                     <p className="form-error">{activitiesState.error.message}</p>
                   ) : activities.length > 0 ? (
                     activities.map((item) => <ActivityItem key={item.id} activity={item} />)
                   ) : (
-                    <p className="muted">Encara no hi ha activitat.</p>
+                    <p className="muted">There is no activity yet.</p>
                   )}
                 </div>
               </div>
@@ -662,7 +662,7 @@ export function IssueDetailPage() {
             <div className="issue-people-header">
               <h3 className="issue-sidebar-title">Assigned</h3>
               <button
-                className={`button issue-people-action${isAssignedToMe ? " button-danger" : " button-primary"}`}
+                className={`button issue-people-action${isAssignedToMe ? " button-danger-outline" : " button-primary"}`}
                 type="button"
                 disabled={lateralLoading}
                 onClick={() => void toggleAssignToMe()}
@@ -720,7 +720,7 @@ export function IssueDetailPage() {
             <div className="issue-people-header">
               <h3 className="issue-sidebar-title">Watchers</h3>
               <button
-                className={`button issue-people-action${isWatching ? " button-danger" : " button-primary"}`}
+                className={`button issue-people-action${isWatching ? " button-danger-outline" : " button-primary"}`}
                 type="button"
                 disabled={lateralLoading}
                 onClick={() => void toggleWatch()}
@@ -792,7 +792,7 @@ export function IssueDetailPage() {
                   disabled={issueDeleteLoading}
                   onClick={() => void deleteIssueAndLeave()}
                 >
-                  {issueDeleteLoading ? "Eliminant..." : "Delete"}
+                  {issueDeleteLoading ? "Deleting..." : "Delete"}
                 </button>
               </div>
               {issueDeleteError ? <p className="form-error">{issueDeleteError}</p> : null}

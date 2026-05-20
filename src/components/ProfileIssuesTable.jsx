@@ -55,7 +55,7 @@ export function ProfileIssuesTable({ username, type, profileUser }) {
   if (issuesState.error) {
     return (
       <EmptyState
-        title="No s'han pogut carregar les incidencies"
+        title="The issues couldn't be loaded"
         description={issuesState.error.message}
       />
     );
@@ -64,8 +64,8 @@ export function ProfileIssuesTable({ username, type, profileUser }) {
   if (issues.length === 0) {
     return (
       <EmptyState
-        title="No s'han trobat incidencies"
-        description="Aquest usuari no te issues en aquesta pestanya."
+        title="No issues found"
+        description="This user has no issues in this tab."
       />
     );
   }
@@ -183,7 +183,7 @@ function AssigneeAvatar({ user }) {
   return (
     <Link className="issue-assignee-link" to={`/profile/${user.username}`} title={`@${user.username}`}>
       {avatarUrl ? (
-        <img className="issue-assignee-avatar" src={avatarUrl} alt={`Avatar de ${user.username}`} />
+        <img className="issue-assignee-avatar" src={avatarUrl} alt={`${user.username}'s avatar`} />
       ) : (
         <span className="issue-assignee-avatar issue-assignee-avatar--initials">{initials}</span>
       )}

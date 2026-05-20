@@ -14,13 +14,13 @@ export function IssueCard({ issue }) {
       </div>
 
       <p className="issue-card__description">
-        {issue.description || "Aquesta incidencia encara no te descripcio."}
+        {issue.description || "This issue does not have a description yet."}
       </p>
 
       <div className="issue-card__meta">
         <span>
           <UserRound size={16} aria-hidden="true" />
-          {issue.assignee?.full_name ?? "Sense assignar"}
+          {issue.assignee?.full_name ?? "Unassigned"}
         </span>
         <span>
           <CalendarDays size={16} aria-hidden="true" />
