@@ -218,20 +218,6 @@ function buildIssueReplacementPayload(issue, catalogKey, originalName, replaceme
   return { [fieldNameMap[catalogKey] ?? catalogKey]: replacementName };
 }
 
-function getGridTemplate(catalog) {
-  return getRowFields(catalog)
-    .map((field) => {
-      if (field.name === "color") return "72px";
-      if (field.name === "name") return "minmax(150px, 180px)";
-      if (field.type === "number") return "88px";
-      if (field.type === "checkbox") return "112px";
-      if (field.type === "select") return "minmax(110px, 120px)";
-      return "minmax(120px, 1fr)";
-    })
-    .concat("120px")
-    .join(" ");
-}
-
 function getRowFields(catalog) {
   const colorField = catalog.fields.find((field) => field.name === "color");
   const restFields = catalog.fields.filter((field) => field.name !== "color");
@@ -284,6 +270,22 @@ function FieldControl({ field, value, onChange, compact = false }) {
     );
   }
 
+  if (field.type === "number") {
+    return (
+      <label className="settings-field">
+        {!compact ? <span>{field.label}</span> : null}
+        <input
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          value={value}
+          placeholder={field.placeholder}
+          onChange={(event) => onChange(event.target.value.replace(/\D+/g, ""))}
+        />
+      </label>
+    );
+  }
+
   return (
     <label className="settings-field">
       {!compact ? <span>{field.label}</span> : null}
@@ -297,28 +299,29 @@ function FieldControl({ field, value, onChange, compact = false }) {
   );
 }
 
-function SettingsRow({ catalog, item, draft, saving, onChange, onSave, onDelete, gridTemplateColumns }) {
+function SettingsRow({ catalog, item, draft, saving, onChange, onSave, onDelete }) {
   const rowFields = getRowFields(catalog);
+  const isDueDateCatalog = catalog.resource === "due-dates";
 
   return (
-    <div className="settings-table-row" style={{ gridTemplateColumns }}>
-      {rowFields.map((field, index) => (
-        <div
+    <tr className={`settings-manage-row${isDueDateCatalog ? " settings-manage-row--due-dates" : ""}`}>
+      {rowFields.map((field) => (
+        <td
           key={field.name}
-          className={`settings-table-cell${field.type === "checkbox" ? " settings-table-cell--center" : ""}${
-            field.name === "color" ? " settings-table-cell--color" : ""
-          }`}
+          className={`settings-manage-cell settings-manage-cell--${field.name}${
+            field.type === "checkbox" ? " settings-manage-cell--center" : ""
+          }${field.name === "color" ? " settings-manage-cell--color" : ""}`}
         >
           <FieldControl
             field={field}
             value={draft[field.name]}
             onChange={(nextValue) => onChange(item.name, field.name, nextValue)}
-            compact={index > 0}
+            compact
           />
-        </div>
+        </td>
       ))}
 
-      <div className="settings-table-cell settings-table-actions">
+      <td className="settings-manage-cell settings-table-actions">
         <button className="button button-primary" type="button" onClick={() => onSave(item.name)} disabled={saving}>
           Save
         </button>
@@ -326,8 +329,8 @@ function SettingsRow({ catalog, item, draft, saving, onChange, onSave, onDelete,
           <Trash2 size={14} aria-hidden="true" />
           Delete
         </button>
-      </div>
-    </div>
+      </td>
+    </tr>
   );
 }
 
@@ -348,7 +351,6 @@ export function SettingsPage() {
     () => [...items].sort((left, right) => left.name.localeCompare(right.name)),
     [items]
   );
-  const rowGridTemplate = useMemo(() => getGridTemplate(activeCatalog), [activeCatalog]);
 
   useEffect(() => {
     let ignore = false;
@@ -544,21 +546,26 @@ export function SettingsPage() {
   }
 
   return (
-    <section className="page-stack settings-page settings-workspace issue-workspace">
-      <header className="topbar custom-topbar issue-topbar">
-        <AppBrand className="issue-workspace-brand" subtitle="Focus mode for bug tracking and triage" />
+    <section className="page-stack settings-page settings-workspace issue-workspace lookup-manage-page">
+      <div className="app-bg-shape app-bg-shape-left" aria-hidden="true" />
+      <div className="app-bg-shape app-bg-shape-right" aria-hidden="true" />
 
-        <div className="topbar-search" aria-hidden="true" />
+      <header className="topbar custom-topbar issue-topbar settings-topbar">
+        <AppBrand className="issue-workspace-brand" subtitle="Configuration Hub" />
 
-        <Link className="button settings-back-button" to="/issues">
-          <ArrowLeft size={16} aria-hidden="true" />
-          Back to issues
-        </Link>
+        <div className="topbar-search settings-topbar-spacer" aria-hidden="true" />
+
+        <div className="topbar-profile settings-topbar-profile">
+          <Link className="button settings-back-button" to="/issues">
+            <ArrowLeft size={16} aria-hidden="true" />
+            Back to issues
+          </Link>
+        </div>
       </header>
 
-      <main className="settings-shell">
-        <aside className="panel settings-sidebar">
-          <div className="settings-sidebar__title">
+      <main className="settings-layout">
+        <aside className="panel settings-sidebar settings-sidebar-panel">
+          <div className="settings-sidebar__title settings-menu-title">
             <Settings2 size={17} aria-hidden="true" />
             Settings Menu
           </div>
@@ -580,7 +587,7 @@ export function SettingsPage() {
           </div>
         </aside>
 
-        <section className="settings-main">
+        <div className="settings-content">
           <section className="panel settings-create-card">
             <h2>Add new {activeCatalog.singular}</h2>
 
@@ -607,37 +614,38 @@ export function SettingsPage() {
           </section>
 
           <section className="panel settings-table-card">
-            <h2>Existing edit {activeCatalog.label.toLowerCase()}</h2>
+            <h2>Existing {activeCatalog.label.toLowerCase()}</h2>
 
             {loading ? <LoadingState /> : null}
 
             {!loading && activeItems.length > 0 ? (
-              <div className="settings-table">
-                <div
-                  className="settings-table-row settings-table-row--header"
-                  style={{ gridTemplateColumns: rowGridTemplate }}
-                >
-                  {getRowFields(activeCatalog).map((field) => (
-                    <div key={field.name} className="settings-table-head">
-                      {field.label}
-                    </div>
-                  ))}
-                  <div className="settings-table-head">Actions</div>
-                </div>
-
-                {activeItems.map((item) => (
-                  <SettingsRow
-                    key={item.name}
-                    catalog={activeCatalog}
-                    item={item}
-                    draft={rowDrafts[item.name] ?? itemToFormValues(activeCatalog, item)}
-                    saving={savingRowName === item.name}
-                    onChange={handleRowFieldChange}
-                    onSave={handleSave}
-                    onDelete={openDeleteDialog}
-                    gridTemplateColumns={rowGridTemplate}
-                  />
-                ))}
+              <div className="settings-table-wrap">
+                <table className="settings-manage-table">
+                  <thead>
+                    <tr>
+                      {getRowFields(activeCatalog).map((field) => (
+                        <th key={field.name} className={field.name === "color" ? "settings-manage-head settings-manage-head--color" : "settings-manage-head"}>
+                          {field.label}
+                        </th>
+                      ))}
+                      <th className="settings-manage-head settings-manage-head--actions">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activeItems.map((item) => (
+                      <SettingsRow
+                        key={item.name}
+                        catalog={activeCatalog}
+                        item={item}
+                        draft={rowDrafts[item.name] ?? itemToFormValues(activeCatalog, item)}
+                        saving={savingRowName === item.name}
+                        onChange={handleRowFieldChange}
+                        onSave={handleSave}
+                        onDelete={openDeleteDialog}
+                      />
+                    ))}
+                  </tbody>
+                </table>
               </div>
             ) : null}
 
@@ -648,7 +656,7 @@ export function SettingsPage() {
               />
             ) : null}
           </section>
-        </section>
+        </div>
       </main>
 
       {deleteDialog ? (

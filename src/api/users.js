@@ -1,5 +1,4 @@
 import { apiRequest } from "./client";
-import { normalizePagedList } from "../utils/apiList";
 
 export async function getUser(apiKey, username) {
   return apiRequest(`/api/users/${username}/`, { apiKey });
@@ -29,8 +28,7 @@ export async function updateUserProfile(apiKey, username, data) {
 }
 
 export async function listUsers(apiKey) {
-  const data = await apiRequest("/api/users/", { apiKey });
-  return normalizePagedList(data);
+  return apiRequest("/api/users/", { apiKey });
 }
 
 export function getUserIssues(apiKey, username, type, query = {}) {
