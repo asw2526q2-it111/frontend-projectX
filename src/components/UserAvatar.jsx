@@ -23,8 +23,8 @@ function getVariantStyles(variant, size) {
       useSpan: true,
     },
     topbar: {
-      image: "profile-avatar-large",
-      fallback: "profile-avatar-large",
+      image: "issue-profile-avatar",
+      fallback: "issue-profile-avatar issue-profile-avatar--initials",
       useSpan: true,
     },
     profile: {
