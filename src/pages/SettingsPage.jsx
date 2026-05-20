@@ -5,7 +5,6 @@ import { AppBrand } from "../components/AppBrand";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingState } from "../components/LoadingState";
 import { createLookup, deleteLookup, listLookup, updateLookup } from "../api/lookups";
-import { listIssues, updateIssue } from "../api/issues";
 import { useCurrentUser } from "../context/currentUser";
 
 const CATALOGS = {
@@ -95,12 +94,6 @@ const CATALOGS = {
 
 const CATALOG_ORDER = Object.keys(CATALOGS);
 const REASSIGNABLE_CATALOGS = new Set(["statuses", "types", "priorities", "severities"]);
-const ISSUE_LOOKUP_FIELDS = {
-  statuses: "status",
-  types: "type",
-  priorities: "priority",
-  severities: "severity",
-};
 
 function getResults(payload) {
   return Array.isArray(payload?.results) ? payload.results : Array.isArray(payload) ? payload : [];
@@ -171,51 +164,6 @@ function serializeFormValues(catalog, values) {
   }
 
   return { payload };
-}
-
-function getLookupName(value) {
-  if (!value) return "";
-  if (typeof value === "string") return value;
-  if (typeof value === "object" && value.name) return String(value.name);
-  return "";
-}
-
-function getTagNames(tags) {
-  if (!Array.isArray(tags)) return [];
-
-  return tags
-    .map((tag) => {
-      if (!tag) return "";
-      if (typeof tag === "string") return tag;
-      if (typeof tag === "object" && tag.name) return String(tag.name);
-      return "";
-    })
-    .filter(Boolean);
-}
-
-function isIssueAffected(issue, catalogKey, lookupName) {
-  if (catalogKey === "tags") {
-    return getTagNames(issue.tags).includes(lookupName);
-  }
-
-  const issueLookupValue = getLookupName(issue?.[ISSUE_LOOKUP_FIELDS[catalogKey] ?? ""]);
-  return issueLookupValue === lookupName;
-}
-
-function buildIssueReplacementPayload(issue, catalogKey, originalName, replacementName) {
-  if (catalogKey === "tags") {
-    const nextTags = getTagNames(issue.tags).map((tagName) => (tagName === originalName ? replacementName : tagName));
-    return { tags: Array.from(new Set(nextTags)) };
-  }
-
-  const fieldNameMap = {
-    statuses: "status",
-    types: "type",
-    priorities: "priority",
-    severities: "severity",
-  };
-
-  return { [fieldNameMap[catalogKey] ?? catalogKey]: replacementName };
 }
 
 function getRowFields(catalog) {
@@ -432,23 +380,12 @@ export function SettingsPage() {
       loading: true,
       replacementOptions: [],
       replacement: "",
-      affectedCount: 0,
-      affectedIssues: [],
       message,
     });
 
     try {
-      const [lookupPayload, issuesPayload] = await Promise.all([
-        listLookup(currentUser.apiKey, activeCatalog.resource),
-        ISSUE_LOOKUP_FIELDS[activeCatalogKey]
-          ? listIssues(currentUser.apiKey, { [ISSUE_LOOKUP_FIELDS[activeCatalogKey]]: item.name })
-          : listIssues(currentUser.apiKey),
-      ]);
-
+      const lookupPayload = await listLookup(currentUser.apiKey, activeCatalog.resource);
       const replacementOptions = getResults(lookupPayload).filter((option) => option.name !== item.name);
-      const affectedIssues = getResults(issuesPayload).filter((issue) =>
-        isIssueAffected(issue, activeCatalogKey, item.name)
-      );
 
       setDeleteDialog((current) =>
         current
@@ -457,8 +394,6 @@ export function SettingsPage() {
               loading: false,
               replacementOptions,
               replacement: replacementOptions[0]?.name ?? "",
-              affectedCount: affectedIssues.length,
-              affectedIssues,
             }
           : current
       );
@@ -522,7 +457,7 @@ export function SettingsPage() {
   async function confirmDelete() {
     if (!deleteDialog) return;
 
-    const { item, affectedIssues, replacement } = deleteDialog;
+    const { item, replacement } = deleteDialog;
     if (!replacement) {
       setErrorMessage("Please choose a replacement.");
       return;
@@ -532,14 +467,7 @@ export function SettingsPage() {
     setErrorMessage("");
 
     try {
-      if (affectedIssues.length > 0) {
-        const replacementPayloads = affectedIssues.map((issue) =>
-          updateIssue(currentUser.apiKey, issue.id, buildIssueReplacementPayload(issue, activeCatalogKey, item.name, replacement))
-        );
-        await Promise.all(replacementPayloads);
-      }
-
-      await deleteLookup(currentUser.apiKey, activeCatalog.resource, item.name);
+      await deleteLookup(currentUser.apiKey, activeCatalog.resource, item.name, replacement);
       await refreshCatalog();
       closeDeleteDialog();
     } catch (error) {
@@ -745,7 +673,6 @@ export function SettingsPage() {
                     setDeleteDialog((current) => (current ? { ...current, replacement: event.target.value } : current))
                   }
                 >
-                  <option value="">Select replacement</option>
                   {deleteDialog.replacementOptions.map((option) => (
                     <option key={option.name} value={option.name}>
                       {option.name}

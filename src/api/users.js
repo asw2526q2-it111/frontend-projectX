@@ -11,20 +11,11 @@ export async function updateUserProfile(apiKey, username, data) {
   if (data.avatar) formData.append("avatar", data.avatar);
   if (data.remove_avatar) formData.append("remove_avatar", "true");
 
-  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/users/${username}/`, {
-    method: "PATCH", 
-    headers: {
-      "X-API-Key": apiKey,
-    },
+  return apiRequest(`/api/users/${username}/`, {
+    apiKey,
+    method: "PATCH",
     body: formData,
   });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || "Could not update the profile");
-  }
-
-  return response.json();
 }
 
 export async function listUsers(apiKey) {
