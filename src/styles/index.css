@@ -2728,12 +2728,9 @@ img.profile-avatar-large {
   background: #fff;
 }
 
-.issue-workspace.issue-detail-page .btn-plus {
-  width: 2.35rem;
-  height: 2.35rem;
-  padding: 0;
-  font-size: 1.2rem;
-  line-height: 1;
+.issue-workspace.issue-detail-page .btn-attachment-upload {
+  min-height: 2.35rem;
+  padding-inline: 0.95rem;
 }
 
 .issue-workspace.issue-detail-page .attachment-sub {

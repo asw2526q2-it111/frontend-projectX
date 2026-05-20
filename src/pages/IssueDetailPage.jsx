@@ -629,14 +629,14 @@ export function IssueDetailPage() {
                 onChange={(event) => void handleAttachmentFileChange(event)}
               />
               <button
-                className="btn btn-primary btn-plus"
+                className="btn btn-primary btn-attachment-upload"
                 type="button"
                 disabled={attachmentUploadLoading}
                 onClick={() => attachmentFileInputRef.current?.click()}
                 aria-label="Add attachment"
                 title="Add attachment"
               >
-                +
+                Add attachment
               </button>
             </div>
             <div className="attachment-sub">

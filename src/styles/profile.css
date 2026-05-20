@@ -301,6 +301,17 @@
   box-shadow: 0 10px 24px rgba(13, 138, 168, 0.18);
 }
 
+.profile-topbar .btn-secondary {
+  border: 1px solid #dde6ee;
+  color: #1f2d3d;
+  background: #f3f6f8;
+}
+
+.profile-topbar .btn-secondary:hover {
+  background: #e9eef2;
+  box-shadow: none;
+}
+
 .profile-comments-list {
   display: grid;
   gap: 14px;
