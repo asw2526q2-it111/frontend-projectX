@@ -36,7 +36,7 @@ export function AppLayout() {
       <div className="workspace">
         <header className="topbar">
           <div>
-            <h1>Gestio d'incidencies</h1>
+            <h1>Issue Management</h1>
             <p>Client React connectat a l'API REST del projecte.</p>
           </div>
           <UserSwitcher />

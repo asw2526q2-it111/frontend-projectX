@@ -333,7 +333,7 @@ export function IssuesPage() {
 
           {loading ? <LoadingState /> : null}
           {error ? (
-            <EmptyState title="No s'han pogut carregar les issues" description={error.message} />
+            <EmptyState title="The issues couldn't be loaded" description={error.message} />
           ) : null}
 
           {!loading && !error && issues.length > 0 ? (
@@ -484,7 +484,7 @@ function AssigneeAvatar({ user }) {
   return (
     <Link className="issue-assignee-link" to={`/profile/${user.username}`}>
       {avatarUrl ? (
-        <img className="issue-assignee-avatar" src={avatarUrl} alt={`Avatar de ${user.username}`} />
+        <img className="issue-assignee-avatar" src={avatarUrl} alt={`${user.username}'s avatar`} />
       ) : (
         <span className="issue-assignee-avatar issue-assignee-avatar--initials">{userInitials}</span>
       )}

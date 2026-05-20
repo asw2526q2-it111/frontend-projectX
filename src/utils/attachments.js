@@ -28,7 +28,7 @@ export function prepareIssueAttachmentUpload(event) {
   input.value = "";
   if (!file) return { kind: "noop" };
   if (file.size > ATTACHMENT_MAX_BYTES) {
-    return { kind: "invalid", message: "El fitxer supera el límit de 10 MB." };
+    return { kind: "invalid", message: "The file exceeds the 10 MB limit." };
   }
   return { kind: "ok", file };
 }

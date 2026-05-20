@@ -1,5 +1,5 @@
 export function formatDate(value) {
-  if (!value) return "Sense data";
+  if (!value) return "No date";
 
   return new Intl.DateTimeFormat("ca-ES", {
     day: "2-digit",

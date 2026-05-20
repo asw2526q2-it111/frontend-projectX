@@ -49,7 +49,7 @@ export function ProfileCommentsList({ username }) {
       await commentsState.reload({ silent: true });
       cancelEditing();
     } catch (error) {
-      setActionError(getApiActionErrorMessage(error, "No s'ha pogut guardar el comentari."));
+      setActionError(getApiActionErrorMessage(error, "The comment couldn't be saved."));
     } finally {
       setActionLoading(false);
     }
@@ -68,7 +68,7 @@ export function ProfileCommentsList({ username }) {
         cancelEditing();
       }
     } catch (error) {
-      setActionError(getApiActionErrorMessage(error, "No s'ha pogut eliminar el comentari."));
+      setActionError(getApiActionErrorMessage(error, "The comment couldn't be deleted."));
     } finally {
       setActionLoading(false);
     }
@@ -81,7 +81,7 @@ export function ProfileCommentsList({ username }) {
   if (commentsState.error) {
     return (
       <EmptyState
-        title="No s'han pogut carregar els comentaris"
+        title="The comments couldn't be loaded"
         description={commentsState.error.message}
       />
     );
@@ -90,8 +90,8 @@ export function ProfileCommentsList({ username }) {
   if (comments.length === 0) {
     return (
       <EmptyState
-        title="No hi ha comentaris"
-        description="Aquest usuari encara no ha publicat cap comentari."
+        title="There are no comments yet"
+        description="This user has not made any comments yet."
       />
     );
   }
@@ -104,7 +104,7 @@ export function ProfileCommentsList({ username }) {
           <header className="profile-comment-card__header">
             <div className="profile-comment-card__issue">
               <MessageSquareText size={16} aria-hidden="true" />
-              <Link className="profile-comment-card__issue-link" to={`/issues/${comment.issue.id}`}>
+              <Link className="profile-comment-card__issue-link" to={`/issues/${comment.issue.id}#comments`}>
                 <span className="profile-comment-card__issue-id">#{comment.issue.id}</span>
                 <span className="profile-comment-card__issue-title">{comment.issue.title}</span>
               </Link>
@@ -118,7 +118,7 @@ export function ProfileCommentsList({ username }) {
               <textarea
                 value={editingContent}
                 onChange={(event) => setEditingContent(event.target.value)}
-                aria-label="Editar comentari"
+                aria-label="Edit comment"
               />
               <div className="comment-item__edit-actions">
                 <button
@@ -127,7 +127,7 @@ export function ProfileCommentsList({ username }) {
                   disabled={actionLoading || !editingContent.trim()}
                   onClick={() => saveComment(comment.id)}
                 >
-                  Guardar
+                  Save
                 </button>
                 <button
                   className="button"
@@ -135,7 +135,7 @@ export function ProfileCommentsList({ username }) {
                   disabled={actionLoading}
                   onClick={cancelEditing}
                 >
-                  Cancelar
+                  Cancel
                 </button>
               </div>
             </div>
@@ -150,7 +150,7 @@ export function ProfileCommentsList({ username }) {
                     disabled={actionLoading}
                     onClick={() => startEditing(comment)}
                   >
-                    Editar
+                    Edit
                   </button>
                   <button
                     className="button comment-item__action comment-item__action--danger"
@@ -158,7 +158,7 @@ export function ProfileCommentsList({ username }) {
                     disabled={actionLoading}
                     onClick={() => removeComment(comment.id)}
                   >
-                    Eliminar
+                    Delete
                   </button>
                 </div>
               ) : null}

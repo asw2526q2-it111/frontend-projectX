@@ -250,6 +250,19 @@ a {
   background: #912018;
 }
 
+.button-danger-outline {
+  border: 1px solid #f2c6c2;
+  color: var(--danger);
+  background: #ffffff;
+}
+
+.button-danger-outline:hover:not(:disabled) {
+  border-color: #e59f98;
+  color: #912018;
+  background: #fff5f5;
+  box-shadow: none;
+}
+
 .button:disabled {
   cursor: not-allowed;
   opacity: 0.72;
@@ -950,12 +963,16 @@ img.avatar.avatar--sm {
 }
 
 .comment-item__action--danger {
+  border: 1px solid #f2c6c2;
   color: var(--danger);
+  background: #ffffff;
 }
 
-.comment-item__action--danger:hover {
-  border-color: #f2c6c2;
+.comment-item__action--danger:hover:not(:disabled) {
+  border-color: #e59f98;
+  color: #912018;
   background: #fff5f5;
+  box-shadow: none;
 }
 
 .comment-item__content {
