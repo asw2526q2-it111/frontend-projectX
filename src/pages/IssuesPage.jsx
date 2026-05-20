@@ -209,10 +209,7 @@ export function IssuesPage() {
 
         <div className="topbar-profile">
           <Link className="button issue-profile-button" to={`/profile/${currentUser.username}`}>
-            <UserAvatar
-              user={{ username: currentUser.username, full_name: currentUser.fullName }}
-              variant="topbar"
-            />
+            <UserAvatar user={currentUser} variant="topbar" />
             <span className="issue-profile-button__label">{currentUser.username}</span>
           </Link>
         </div>

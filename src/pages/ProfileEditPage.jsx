@@ -94,7 +94,7 @@ export function ProfileEditPage() {
 
             <div className="profile-edit-actions">
               <Link className="btn btn-secondary" to={`/profile/${username}`}>Cancel</Link>
-              <button type="submit" className="btn btn-primary" disabled={saving} style={{ padding: '0.6rem 1.2rem', background: '#0d8aa8', color: 'white', border: 'none', borderRadius: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}>
+              <button type="submit" className="btn btn-primary" disabled={saving}>
                 {saving ? "Saving..." : "Save Changes"}
               </button>
             </div>

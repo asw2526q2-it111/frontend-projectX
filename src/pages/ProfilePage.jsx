@@ -50,7 +50,7 @@ export function ProfilePage() {
         <div className="topbar-actions" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <UserSwitcher />
           
-          <Link className="btn btn-secondary" to="/issues" style={{ padding: '0.6rem 0.85rem', border: '1px solid #dde6ee', borderRadius: '0.7rem', textDecoration: 'none', color: '#1f2d3d', fontWeight: '600' }}>
+          <Link className="btn btn-secondary" to="/issues">
             &larr; Back to issues
           </Link>
         </div>
@@ -99,7 +99,7 @@ export function ProfilePage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '1.5rem' }}>
                 {/* Envolvemos el botón con el Link hacia la ruta de edición */}
                 <Link to={`/profile/${username}/edit`} style={{ textDecoration: 'none' }}>
-                  <button style={{ width: '100%', padding: '0.6rem', background: '#0d8aa8', color: 'white', border: 'none', borderRadius: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}>
+                  <button className="btn" style={{ width: '100%' }} type="button">
                     Edit Profile
                   </button>
                 </Link>
