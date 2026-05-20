@@ -27,6 +27,16 @@ function getVariantStyles(variant, size) {
       fallback: "issue-profile-avatar issue-profile-avatar--initials",
       useSpan: true,
     },
+    creator: {
+      image: "issue-user-avatar",
+      fallback: "issue-user-avatar issue-user-avatar--initials",
+      useSpan: true,
+    },
+    commentAuthor: {
+      image: "comment-author-avatar",
+      fallback: "comment-author-avatar comment-author-avatar--initials",
+      useSpan: true,
+    },
     profile: {
       image: "profile-avatar-large",
       fallback: "profile-avatar-large",
