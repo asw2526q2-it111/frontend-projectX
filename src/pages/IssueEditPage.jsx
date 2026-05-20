@@ -1,7 +1,7 @@
 import { Check, ChevronDown, Plus, UserCheck, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { createIssue } from "../api/issues";
+import { useNavigate, useParams } from "react-router-dom";
+import { getIssue, updateIssue } from "../api/issues";
 import { createLookup, listLookup } from "../api/lookups";
 import { listUsers } from "../api/users";
 import { useCurrentUser } from "../context/currentUser";
@@ -121,6 +121,50 @@ function mapUsernamesToUsers(usernames, users, currentUser) {
       seen.add(normalizedUsername);
       return true;
     });
+}
+
+function getLookupName(value) {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "object" && value.name) return String(value.name);
+  return "";
+}
+
+function getTagNames(tags) {
+  if (!Array.isArray(tags)) return [];
+  return tags
+    .map((tag) => {
+      if (!tag) return "";
+      if (typeof tag === "string") return tag;
+      if (typeof tag === "object" && tag.name) return String(tag.name);
+      return "";
+    })
+    .filter(Boolean);
+}
+
+function getUsername(value) {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "object" && value.username) return String(value.username);
+  return "";
+}
+
+function getWatcherUsernames(watchers) {
+  if (!Array.isArray(watchers)) return [];
+  return watchers
+    .map((watcher) => {
+      if (!watcher) return "";
+      if (typeof watcher === "string") return watcher;
+      if (typeof watcher === "object" && watcher.username) return String(watcher.username);
+      return "";
+    })
+    .filter(Boolean);
+}
+
+function toDateInputValue(value) {
+  if (!value) return "";
+  const asText = String(value);
+  return asText.includes("T") ? asText.split("T")[0] : asText;
 }
 
 function UserAvatar({ user, size = "md" }) {
@@ -532,9 +576,10 @@ function LookupCreateModal({ target, values, saving, error, onChange, onCancel, 
   );
 }
 
-export function IssueCreatePage() {
+export function IssueEditPage() {
   const { currentUser } = useCurrentUser();
   const navigate = useNavigate();
+  const { issueId } = useParams();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [deadline, setDeadline] = useState("");
@@ -566,14 +611,21 @@ export function IssueCreatePage() {
   );
 
   useEffect(() => {
+    if (!issueId) {
+      setLoadError("Issue no trobada.");
+      setLoadingData(false);
+      return undefined;
+    }
+
     let ignore = false;
 
-    async function loadCreateData() {
+    async function loadEditData() {
       setLoadingData(true);
       setLoadError("");
 
       try {
-        const [statuses, types, priorities, severities, tags, userList] = await Promise.all([
+        const [issue, statuses, types, priorities, severities, tags, userList] = await Promise.all([
+          getIssue(currentUser.apiKey, issueId),
           listLookup(currentUser.apiKey, "statuses"),
           listLookup(currentUser.apiKey, "types"),
           listLookup(currentUser.apiKey, "priorities"),
@@ -594,12 +646,18 @@ export function IssueCreatePage() {
 
         setLookups(nextLookups);
         setUsers(getResults(userList));
-        setMetadata((current) => ({
-          status: current.status || nextLookups.statuses[0]?.name || "",
-          type: current.type || nextLookups.types[0]?.name || "",
-          priority: current.priority || nextLookups.priorities[0]?.name || "",
-          severity: current.severity || nextLookups.severities[0]?.name || "",
-        }));
+        setTitle(issue?.title || "");
+        setDescription(issue?.description || "");
+        setDeadline(toDateInputValue(issue?.deadline));
+        setSelectedTags(getTagNames(issue?.tags));
+        setAssigneeUsername(getUsername(issue?.assignee || issue?.assignee_username));
+        setWatcherUsernames(getWatcherUsernames(issue?.watchers || issue?.watcher_usernames));
+        setMetadata({
+          status: getLookupName(issue?.status) || nextLookups.statuses[0]?.name || "",
+          type: getLookupName(issue?.type) || nextLookups.types[0]?.name || "",
+          priority: getLookupName(issue?.priority) || nextLookups.priorities[0]?.name || "",
+          severity: getLookupName(issue?.severity) || nextLookups.severities[0]?.name || "",
+        });
       } catch (loadDataError) {
         if (!ignore) {
           setLoadError(getErrorMessage(loadDataError, "No s'han pogut carregar les dades del formulari."));
@@ -609,12 +667,12 @@ export function IssueCreatePage() {
       }
     }
 
-    void loadCreateData();
+    void loadEditData();
 
     return () => {
       ignore = true;
     };
-  }, [currentUser.apiKey]);
+  }, [currentUser.apiKey, issueId]);
 
   useEffect(() => {
     if (!openPicker) return undefined;
@@ -717,11 +775,13 @@ export function IssueCreatePage() {
 
   async function handleSubmit(event) {
     event.preventDefault();
+    if (!issueId) return;
+
     setSaving(true);
     setError("");
 
     try {
-      const issue = await createIssue(currentUser.apiKey, {
+      await updateIssue(currentUser.apiKey, issueId, {
         title,
         description,
         deadline: deadline || null,
@@ -733,9 +793,9 @@ export function IssueCreatePage() {
         assignee_username: assigneeUsername || null,
         watcher_usernames: watcherUsernames,
       });
-      navigate(`/issues/${issue.id}`);
+      navigate(`/issues/${issueId}`);
     } catch (submitError) {
-      setError(getErrorMessage(submitError, "No s'ha pogut crear la issue."));
+      setError(getErrorMessage(submitError, "No s'ha pogut actualitzar la issue."));
     } finally {
       setSaving(false);
     }
@@ -748,20 +808,20 @@ export function IssueCreatePage() {
           <div className="brand-mark">IX</div>
           <div>
             <h1>Issue Hub</h1>
-            <p>Create issue</p>
+            <p>Edit issue</p>
           </div>
         </div>
         <div className="topbar-actions">
-          <button className="btn btn-secondary" type="button" onClick={() => navigate("/issues")}>
-            Back to issues
+          <button className="btn btn-secondary" type="button" onClick={() => navigate(`/issues/${issueId}`)}>
+            Back to issue
           </button>
         </div>
       </header>
 
       <main className="create-layout issue-shell">
         <div>
-          <span className="issue-page-eyebrow">Create</span>
-          <h2 className="issue-title-text issue-title-text--form">New issue</h2>
+          <span className="issue-page-eyebrow">Edit</span>
+          <h2 className="issue-title-text issue-title-text--form">Edit issue</h2>
         </div>
 
         {loadError ? <p className="form-error create-load-error">{loadError}</p> : null}
@@ -864,11 +924,11 @@ export function IssueCreatePage() {
 
               <section className="issue-sidebar-section create-sidebar-actions">
                 {error ? <p className="form-error">{error}</p> : null}
-                <button className="button" type="button" onClick={() => navigate("/issues")}>
+                <button className="button" type="button" onClick={() => navigate(`/issues/${issueId}`)}>
                   Cancel
                 </button>
                 <button className="button button-primary" type="submit" disabled={saving || loadingData}>
-                  {saving ? "Creant..." : loadingData ? "Loading..." : "Create issue"}
+                  {saving ? "Guardant..." : loadingData ? "Loading..." : "Save changes"}
                 </button>
               </section>
             </aside>
