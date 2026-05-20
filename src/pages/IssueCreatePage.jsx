@@ -1,6 +1,6 @@
-import { Check, ChevronDown, Plus, UserCheck, X } from "lucide-react";
+import { ChevronDown, Plus, UserCheck, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { createIssue } from "../api/issues";
 import { createLookup, listLookup } from "../api/lookups";
 import { listUsers } from "../api/users";
@@ -116,43 +116,22 @@ function mapUsernamesToUsers(usernames, users, currentUser) {
     });
 }
 
-function UserAvatar({ user, size = "md" }) {
-  const className = `create-user-avatar create-user-avatar--${size}`;
+function UserAvatar({ user, size = "small" }) {
+  const className = `issue-user-avatar${size === "small" ? " issue-user-avatar--small" : ""}`;
 
   if (user?.avatar_url) {
     return <img className={className} src={user.avatar_url} alt={`${user.username}'s avatar`} />;
   }
 
   return (
-    <span className={`${className} create-user-avatar--initials`} aria-hidden="true">
+    <span className={`${className} issue-user-avatar--initials`} aria-hidden="true">
       {getUserInitials(user)}
     </span>
   );
 }
 
 function ColorDot({ color }) {
-  return <span className="create-color-dot" style={{ background: color || "#94a3b8" }} />;
-}
-
-function PickerContainer({ className = "", isOpen, onToggle, summary, children }) {
-  return (
-    <div
-      className={`create-picker${isOpen ? " is-open" : ""}${className ? ` ${className}` : ""}`}
-      data-create-picker-root="true"
-    >
-      <button
-        className="create-picker-summary"
-        type="button"
-        aria-expanded={isOpen}
-        aria-haspopup="menu"
-        onClick={onToggle}
-      >
-        {summary}
-        <ChevronDown className="create-picker-chevron" size={16} aria-hidden="true" />
-      </button>
-      {isOpen ? <div className="create-picker-menu">{children}</div> : null}
-    </div>
-  );
+  return <span className="sel-dot" style={{ background: color || "#94a3b8" }} aria-hidden="true" />;
 }
 
 function LookupDropdown({ label, value, options, isOpen, onToggle, onClose, onChange, onCreate }) {
@@ -166,33 +145,43 @@ function LookupDropdown({ label, value, options, isOpen, onToggle, onClose, onCh
   return (
     <div className="create-field">
       <span className="create-label">{label}</span>
-      <PickerContainer
-        isOpen={isOpen}
-        onToggle={onToggle}
-        summary={
+      <div
+        className={`create-picker${isOpen ? " is-open" : ""}`}
+        data-create-picker-root="true"
+      >
+        <button
+          className="create-picker-summary"
+          type="button"
+          aria-expanded={isOpen}
+          aria-haspopup="menu"
+          onClick={onToggle}
+        >
           <span className="create-picker-value">
             <ColorDot color={selected?.color} />
             <span>{selected?.name || `Select ${label.toLowerCase()}`}</span>
           </span>
-        }
-      >
-        {options.map((option) => (
-          <button
-            className={`create-picker-option${option.name === value ? " is-selected" : ""}`}
-            key={option.name}
-            type="button"
-            onClick={() => handleSelect(option.name)}
-          >
-            <ColorDot color={option.color} />
-            <span>{option.name}</span>
-            {option.name === value ? <Check size={15} aria-hidden="true" /> : null}
-          </button>
-        ))}
-        <button className="create-picker-create" type="button" onClick={onCreate}>
-          <Plus size={15} aria-hidden="true" />
-          New {label.toLowerCase()}
+          <ChevronDown className="create-picker-chevron" size={16} aria-hidden="true" />
         </button>
-      </PickerContainer>
+        {isOpen ? (
+          <div className="create-picker-menu">
+            {options.map((option) => (
+              <button
+                className={`create-picker-option${option.name === value ? " is-selected" : ""}`}
+                key={option.name}
+                type="button"
+                onClick={() => handleSelect(option.name)}
+              >
+                <ColorDot color={option.color} />
+                <span>{option.name}</span>
+              </button>
+            ))}
+            <button className="create-picker-create" type="button" onClick={onCreate}>
+              <Plus size={15} aria-hidden="true" />
+              New {label.toLowerCase()}
+            </button>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -223,53 +212,54 @@ function TagPicker({ options, selectedTags, isOpen, onToggle, onAdd, onRemove, o
           )}
         </div>
 
-        <PickerContainer
-          className="create-picker--tags"
-          isOpen={isOpen}
-          onToggle={onToggle}
-          summary={<span>Add tag</span>}
+        <div
+          className={`create-picker create-picker--tags${isOpen ? " is-open" : ""}`}
+          data-create-picker-root="true"
         >
-          {availableOptions.length > 0 ? (
-            availableOptions.map((tag) => (
-              <button className="create-picker-option" key={tag.name} type="button" onClick={() => onAdd(tag.name)}>
-                <ColorDot color={tag.color} />
-                <span>{tag.name}</span>
-              </button>
-            ))
-          ) : (
-            <span className="create-picker-empty">All tags are selected.</span>
-          )}
-          <button className="create-picker-create" type="button" onClick={onCreate}>
-            <Plus size={15} aria-hidden="true" />
-            New tag
+          <button className="create-picker-summary" type="button" aria-expanded={isOpen} onClick={onToggle}>
+            <span>Add tag</span>
+            <ChevronDown className="create-picker-chevron" size={16} aria-hidden="true" />
           </button>
-        </PickerContainer>
+          {isOpen ? (
+            <div className="create-picker-menu">
+              {availableOptions.length > 0 ? (
+                availableOptions.map((tag) => (
+                  <button className="create-picker-option" key={tag.name} type="button" onClick={() => onAdd(tag.name)}>
+                    <ColorDot color={tag.color} />
+                    <span>{tag.name}</span>
+                  </button>
+                ))
+              ) : (
+                <span className="create-picker-empty">All tags are selected.</span>
+              )}
+              <button className="create-picker-create" type="button" onClick={onCreate}>
+                <Plus size={15} aria-hidden="true" />
+                New tag
+              </button>
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   );
 }
 
-function AssigneePicker({ users, selectedUsername, currentUser, isOpen, onToggle, onClose, onChange }) {
+function AssigneeSection({ users, selectedUsername, currentUser, onChange }) {
   const selectedUser = findUserByUsername(users, selectedUsername, currentUser);
   const currentDraftUser = getCurrentDraftUser(users, currentUser);
   const isAssignedToCurrentUser =
     currentDraftUser &&
     normalizeIdentity(currentDraftUser.username) === normalizeIdentity(selectedUsername);
 
-  function handleAssigneeChange(nextUsername) {
-    onChange(nextUsername);
-    onClose();
-  }
-
   return (
     <section className="issue-sidebar-section">
       <div className="issue-people-header">
         <h3 className="issue-sidebar-title">Assigned</h3>
         <button
-          className={`button create-section-action${isAssignedToCurrentUser ? " button-danger-outline" : ""}`}
           type="button"
+          className={`btn ${isAssignedToCurrentUser ? "btn-delete" : "btn-edit"} btn-sm issue-people-action`}
           disabled={!currentDraftUser?.username}
-          onClick={() => handleAssigneeChange(isAssignedToCurrentUser ? "" : currentDraftUser.username)}
+          onClick={() => onChange(isAssignedToCurrentUser ? "" : currentDraftUser.username)}
         >
           <UserCheck size={15} aria-hidden="true" />
           {isAssignedToCurrentUser ? "Unassign" : "Assign me"}
@@ -277,67 +267,53 @@ function AssigneePicker({ users, selectedUsername, currentUser, isOpen, onToggle
       </div>
 
       {selectedUser ? (
-        <div className="create-person-card">
-          <UserAvatar user={selectedUser} size="sm" />
-          <div>
-            <strong>{getDisplayName(selectedUser)}</strong>
-            <span>@{selectedUser.username}</span>
-          </div>
+        <div className="issue-person-list">
+          <Link
+            className="issue-person-item issue-person-link"
+            to={`/profile/${selectedUser.username}`}
+            title={`View ${selectedUser.username} profile`}
+          >
+            <UserAvatar user={selectedUser} />
+            <span className="issue-person-name">{selectedUser.username}</span>
+          </Link>
         </div>
       ) : (
-        <p className="create-empty-text">No one is assigned yet.</p>
+        <div className="issue-person-empty">No one is assigned yet.</div>
       )}
 
-      <PickerContainer
-        className="create-picker--people"
-        isOpen={isOpen}
-        onToggle={onToggle}
-        summary={<span>{selectedUser ? "Change assignee" : "Select assignee"}</span>}
-      >
-        <button
-          className={`create-user-option${!selectedUsername ? " is-selected" : ""}`}
-          type="button"
-          onClick={() => handleAssigneeChange("")}
-        >
-          <span className="create-user-avatar create-user-avatar--sm create-user-avatar--empty">-</span>
-          <span className="create-user-copy">
-            <strong>Unassigned</strong>
-            <small>No assignee</small>
-          </span>
-          {!selectedUsername ? <Check size={15} aria-hidden="true" /> : null}
-        </button>
-        {users.map((user) => (
-          <button
-            className={`create-user-option${
-              normalizeIdentity(user.username) === normalizeIdentity(selectedUsername) ? " is-selected" : ""
-            }`}
-            key={user.username}
-            type="button"
-            onClick={() => handleAssigneeChange(user.username)}
-          >
-            <UserAvatar user={user} size="sm" />
-            <span className="create-user-copy">
-              <strong>{getDisplayName(user)}</strong>
-              <small>@{user.username}</small>
-            </span>
-            {normalizeIdentity(user.username) === normalizeIdentity(selectedUsername) ? (
-              <Check size={15} aria-hidden="true" />
-            ) : null}
-          </button>
-        ))}
-      </PickerContainer>
+      <details className="watchers-dropdown" open={Boolean(selectedUsername)}>
+        <summary id="id_assignees">Select assignee</summary>
+        <div className="watchers-list">
+          <label className="watchers-item">
+            <input type="radio" name="assignee" value="" checked={!selectedUsername} onChange={() => onChange("")} />
+            <span>Unassigned</span>
+          </label>
+          {users.map((user) => (
+            <label className="watchers-item" key={user.username}>
+              <input
+                type="radio"
+                name="assignee"
+                value={user.username}
+                checked={selectedUsername === user.username}
+                onChange={() => onChange(user.username)}
+              />
+              <span>{user.username}</span>
+            </label>
+          ))}
+        </div>
+      </details>
     </section>
   );
 }
 
-function WatchersPicker({ users, selectedUsernames, currentUser, isOpen, onToggle, onChange }) {
+function WatchersSection({ users, selectedUsernames, currentUser, onChange }) {
   const currentDraftUser = getCurrentDraftUser(users, currentUser);
-  const selectedSet = new Set(selectedUsernames.map(normalizeIdentity));
   const selectedUsers = mapUsernamesToUsers(selectedUsernames, users, currentUser);
+  const selectedSet = new Set(selectedUsernames.map(normalizeIdentity));
   const currentUserIsWatching =
     currentDraftUser && selectedSet.has(normalizeIdentity(currentDraftUser.username));
 
-  function toggleUser(username) {
+  function toggleWatcher(username) {
     const normalizedUsername = normalizeIdentity(username);
     if (!normalizedUsername) return;
 
@@ -356,66 +332,57 @@ function WatchersPicker({ users, selectedUsernames, currentUser, isOpen, onToggl
       <div className="issue-people-header">
         <h3 className="issue-sidebar-title">Watchers</h3>
         <button
-          className={`button create-section-action${currentUserIsWatching ? " button-danger-outline" : ""}`}
           type="button"
+          className={`btn ${currentUserIsWatching ? "btn-delete" : "btn-edit"} btn-sm issue-people-action`}
           disabled={!currentDraftUser?.username}
-          onClick={() => toggleUser(currentDraftUser.username)}
+          onClick={() => toggleWatcher(currentDraftUser.username)}
         >
-          {currentUserIsWatching ? "Unwatch" : "Watch me"}
+          {currentUserIsWatching ? "Unwatch" : "Watch"}
         </button>
       </div>
 
       {selectedUsers.length > 0 ? (
-        <div className="create-person-list">
-          {selectedUsers.map((user) => (
-            <div className="create-person-card" key={user.username}>
-              <UserAvatar user={user} size="sm" />
-              <div>
-                <strong>{getDisplayName(user)}</strong>
-                <span>@{user.username}</span>
-              </div>
-              <button type="button" onClick={() => toggleUser(user.username)} aria-label={`Remove ${user.username}`}>
-                <X size={14} aria-hidden="true" />
-              </button>
-            </div>
+        <div className="issue-person-list">
+          {selectedUsers.map((watcher) => (
+            <Link
+              className="issue-person-item issue-person-link"
+              key={watcher.username}
+              to={`/profile/${watcher.username}`}
+              title={`View ${watcher.username} profile`}
+            >
+              <UserAvatar user={watcher} />
+              <span className="issue-person-name">{watcher.username}</span>
+            </Link>
           ))}
         </div>
       ) : (
-        <p className="create-empty-text">No watchers yet.</p>
+        <div className="issue-person-empty">No watchers yet.</div>
       )}
 
-      <PickerContainer
-        className="create-picker--people"
-        isOpen={isOpen}
-        onToggle={onToggle}
-        summary={<span>Select watchers{selectedUsers.length ? ` (${selectedUsers.length})` : ""}</span>}
-      >
-        {users.length > 0 ? (
-          users.map((user) => {
-            const isSelected = selectedSet.has(normalizeIdentity(user.username));
-
-            return (
-              <button
-                className={`create-user-option${isSelected ? " is-selected" : ""}`}
-                key={user.username}
-                type="button"
-                onClick={() => toggleUser(user.username)}
-              >
-                <UserAvatar user={user} size="sm" />
-                <span className="create-user-copy">
-                  <strong>{getDisplayName(user)}</strong>
-                  <small>@{user.username}</small>
-                </span>
-                <span className={`create-user-check${isSelected ? " is-selected" : ""}`} aria-hidden="true">
-                  {isSelected ? <Check size={13} aria-hidden="true" /> : null}
-                </span>
-              </button>
-            );
-          })
-        ) : (
-          <span className="create-picker-empty">No users available.</span>
-        )}
-      </PickerContainer>
+      <details className="watchers-dropdown" open={selectedUsernames.length > 0}>
+        <summary id="id_watchers">
+          Select watchers
+          {selectedUsernames.length ? ` (${selectedUsernames.length})` : ""}
+        </summary>
+        <div className="watchers-list">
+          {users.length > 0 ? (
+            users.map((user) => (
+              <label className="watchers-item" key={user.username}>
+                <input
+                  type="checkbox"
+                  name="watchers"
+                  value={user.username}
+                  checked={selectedSet.has(normalizeIdentity(user.username))}
+                  onChange={() => toggleWatcher(user.username)}
+                />
+                <span>{user.username}</span>
+              </label>
+            ))
+          ) : (
+            <span className="assign-hint">No users available</span>
+          )}
+        </div>
+      </details>
     </section>
   );
 }
@@ -512,10 +479,10 @@ function LookupCreateModal({ target, values, saving, error, onChange, onCancel, 
           {error ? <p className="form-error">{error}</p> : null}
 
           <div className="lookup-modal-actions">
-            <button className="button" type="button" onClick={onCancel} disabled={saving}>
+            <button className="btn btn-secondary" type="button" onClick={onCancel} disabled={saving}>
               Cancel
             </button>
-            <button className="button button-primary" type="submit" disabled={saving}>
+            <button className="btn btn-primary" type="submit" disabled={saving}>
               {saving ? "Creating..." : "Create"}
             </button>
           </div>
@@ -633,6 +600,10 @@ export function IssueCreatePage() {
     };
   }, [openPicker]);
 
+  function updateMetadata(key, value) {
+    setMetadata((current) => ({ ...current, [key]: value }));
+  }
+
   function togglePicker(pickerKey) {
     setOpenPicker((current) => (current === pickerKey ? null : pickerKey));
   }
@@ -641,12 +612,7 @@ export function IssueCreatePage() {
     setOpenPicker(null);
   }
 
-  function updateMetadata(key, value) {
-    setMetadata((current) => ({ ...current, [key]: value }));
-  }
-
   function openLookupCreate(target) {
-    closePicker();
     setCreateTarget(target);
     setCreateValues({ name: "", color: target.color, is_closed: false });
     setCreateLookupError("");
@@ -701,7 +667,9 @@ export function IssueCreatePage() {
   }
 
   function addTag(tagName) {
-    setSelectedTags((current) => (current.includes(tagName) ? current : [...current, tagName]));
+    if (!tagName || selectedTags.includes(tagName)) return;
+    setSelectedTags((current) => [...current, tagName]);
+    setOpenPicker(null);
   }
 
   function removeTag(tagName) {
@@ -746,29 +714,25 @@ export function IssueCreatePage() {
         </div>
         <div className="topbar-actions">
           <button className="btn btn-secondary" type="button" onClick={() => navigate("/issues")}>
-            Back to issues
+            &larr; Back to issues
           </button>
         </div>
       </header>
 
       <main className="create-layout issue-shell">
-        <div>
-          <span className="issue-page-eyebrow">Create</span>
-          <h2 className="issue-title-text issue-title-text--form">New issue</h2>
-        </div>
-
         {loadError ? <p className="form-error create-load-error">{loadError}</p> : null}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <div className="issue-view-grid">
             <div className="issue-content-stack">
               <section className="panel issue-form-panel">
                 <div className="issue-form-block">
-                  <label className="create-field">
-                    <span className="create-label">
-                      Title <strong>*</strong>
-                    </span>
+                  <div className="form-field">
+                    <label htmlFor="id_title">
+                      Title <span className="required-mark">*</span>
+                    </label>
                     <input
+                      id="id_title"
                       value={title}
                       onChange={(event) => setTitle(event.target.value)}
                       placeholder="Short, descriptive title"
@@ -776,7 +740,7 @@ export function IssueCreatePage() {
                       required
                       autoFocus
                     />
-                  </label>
+                  </div>
                 </div>
 
                 <div className="issue-form-block">
@@ -792,15 +756,15 @@ export function IssueCreatePage() {
                 </div>
 
                 <div className="issue-form-block">
-                  <label className="create-field">
-                    <span className="create-label">Description</span>
+                  <div className="form-field">
+                    <label htmlFor="id_description">Description</label>
                     <textarea
+                      id="id_description"
                       value={description}
                       onChange={(event) => setDescription(event.target.value)}
                       placeholder="Describe the issue, steps to reproduce, expected behaviour..."
-                      rows={10}
                     />
-                  </label>
+                  </div>
                 </div>
               </section>
             </div>
@@ -825,44 +789,43 @@ export function IssueCreatePage() {
 
               <section className="issue-sidebar-section">
                 <h3 className="issue-sidebar-title">Planning</h3>
-                <label className="create-field">
-                  <span className="create-label">Deadline</span>
-                  <div className="create-date-row">
-                    <input type="date" value={deadline} onChange={(event) => setDeadline(event.target.value)} />
-                    <button className="button" type="button" onClick={() => setDeadline("")}>
+                <div className="form-field">
+                  <label htmlFor="id_deadline">Deadline</label>
+                  <div className="val-action-row">
+                    <input
+                      id="id_deadline"
+                      type="date"
+                      value={deadline}
+                      onChange={(event) => setDeadline(event.target.value)}
+                    />
+                    <button className="btn btn-delete btn-sm" type="button" onClick={() => setDeadline("")}>
                       Clear
                     </button>
                   </div>
-                </label>
+                </div>
               </section>
 
-              <AssigneePicker
+              <AssigneeSection
                 users={users}
                 selectedUsername={assigneeUsername}
                 currentUser={currentUser}
-                isOpen={openPicker === "assignee"}
-                onToggle={() => togglePicker("assignee")}
-                onClose={closePicker}
                 onChange={setAssigneeUsername}
               />
 
-              <WatchersPicker
+              <WatchersSection
                 users={users}
                 selectedUsernames={watcherUsernames}
                 currentUser={currentUser}
-                isOpen={openPicker === "watchers"}
-                onToggle={() => togglePicker("watchers")}
                 onChange={setWatcherUsernames}
               />
 
-              <section className="issue-sidebar-section create-sidebar-actions">
-                {error ? <p className="form-error">{error}</p> : null}
-                <button className="button" type="button" onClick={() => navigate("/issues")}>
-                  Cancel
-                </button>
-                <button className="button button-primary" type="submit" disabled={saving || loadingData}>
-                  {saving ? "Creant..." : loadingData ? "Loading..." : "Create issue"}
-                </button>
+              <section className="issue-sidebar-section issue-sidebar-section--actions">
+                <div className="issue-form-actions">
+                  {error ? <p className="form-error">{error}</p> : null}
+                  <button className="btn btn-primary" type="submit" disabled={saving || loadingData}>
+                    {saving ? "Creating..." : loadingData ? "Loading..." : "Create issue"}
+                  </button>
+                </div>
               </section>
             </aside>
           </div>

@@ -146,7 +146,7 @@ function UserPickerLabel({ user }) {
   );
 }
 
-function UserPickerOption({ user, inputType, name, checked, onChange }) {
+function UserPickerOption({ user, inputType, name, checked, disabled = false, onChange }) {
   return (
     <label className="watchers-item">
       <input
@@ -154,6 +154,7 @@ function UserPickerOption({ user, inputType, name, checked, onChange }) {
         name={inputType === "radio" ? name : undefined}
         value={inputType === "radio" ? user.username : undefined}
         checked={checked}
+        disabled={disabled}
         onChange={onChange}
       />
       <UserPickerLabel user={user} />
@@ -501,6 +502,26 @@ export function IssueDetailPage() {
     );
   }
 
+  async function handleAssigneeSelection(username) {
+    setDraftAssigneeUsername(username);
+    await runLateralAction(
+      () => applyIssueAssignees(apiKey, issueId, username),
+      "The assignee couldn't be applied."
+    );
+  }
+
+  async function handleWatcherToggle(username) {
+    const nextUsernames = draftWatcherUsernames.includes(username)
+      ? draftWatcherUsernames.filter((item) => item !== username)
+      : [...draftWatcherUsernames, username];
+
+    setDraftWatcherUsernames(nextUsernames);
+    await runLateralAction(
+      () => applyIssueWatchers(apiKey, issueId, nextUsernames),
+      "The watchers couldn't be applied."
+    );
+  }
+
   function toggleDraftWatcher(username) {
     setDraftWatcherUsernames((current) =>
       current.includes(username)
@@ -803,7 +824,8 @@ export function IssueDetailPage() {
                     name="assignee"
                     value=""
                     checked={!draftAssigneeUsername}
-                    onChange={() => setDraftAssigneeUsername("")}
+                    disabled={lateralLoading || usersState.loading}
+                    onChange={() => void handleAssigneeSelection("")}
                   />
                   <span>Unassigned</span>
                 </label>
@@ -814,21 +836,12 @@ export function IssueDetailPage() {
                     inputType="radio"
                     name="assignee"
                     checked={draftAssigneeUsername === user.username}
-                    onChange={() => setDraftAssigneeUsername(user.username)}
+                    disabled={lateralLoading || usersState.loading}
+                    onChange={() => void handleAssigneeSelection(user.username)}
                   />
                 ))}
               </div>
             </details>
-            <div className="issue-people-apply-row">
-              <button
-                className="btn btn-secondary btn-sm issue-people-apply"
-                type="button"
-                disabled={lateralLoading || usersState.loading}
-                onClick={() => void applyAssignees()}
-              >
-                Apply
-              </button>
-            </div>
           </section>
 
           <section className="issue-sidebar-section">
@@ -869,7 +882,8 @@ export function IssueDetailPage() {
                       user={user}
                       inputType="checkbox"
                       checked={draftWatcherUsernames.includes(user.username)}
-                      onChange={() => toggleDraftWatcher(user.username)}
+                      disabled={lateralLoading || usersState.loading}
+                      onChange={() => void handleWatcherToggle(user.username)}
                     />
                   ))
                 ) : (
@@ -877,16 +891,6 @@ export function IssueDetailPage() {
                 )}
               </div>
             </details>
-            <div className="issue-people-apply-row">
-              <button
-                className="btn btn-secondary btn-sm issue-people-apply"
-                type="button"
-                disabled={lateralLoading || usersState.loading}
-                onClick={() => void applyWatchers()}
-              >
-                Apply
-              </button>
-            </div>
           </section>
 
           {lateralError ? <p className="comment-error issue-sidebar-error">{lateralError}</p> : null}
