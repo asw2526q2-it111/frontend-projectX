@@ -322,13 +322,15 @@ function SettingsRow({ catalog, item, draft, saving, onChange, onSave, onDelete 
       ))}
 
       <td className="settings-manage-cell settings-table-actions">
-        <button className="button button-primary" type="button" onClick={() => onSave(item.name)} disabled={saving}>
-          Save
-        </button>
-        <button className="button button-danger" type="button" onClick={() => onDelete(item)} disabled={saving}>
-          <Trash2 size={14} aria-hidden="true" />
-          Delete
-        </button>
+        <div className="settings-table-actions__inner">
+          <button className="button button-primary" type="button" onClick={() => onSave(item.name)} disabled={saving}>
+            Save
+          </button>
+          <button className="button button-danger" type="button" onClick={() => onDelete(item)} disabled={saving}>
+            <Trash2 size={14} aria-hidden="true" />
+            Delete
+          </button>
+        </div>
       </td>
     </tr>
   );
@@ -486,6 +488,14 @@ export function SettingsPage() {
       closeDeleteDialog();
     } catch (error) {
       if (error?.status === 409) {
+        if (REASSIGNABLE_CATALOGS.has(activeCatalogKey) && activeItems.length > 1) {
+          await buildReplacementDialog(
+            item,
+            `${item.name} is still being used by one or more issues. Choose a replacement ${activeCatalog.singular} before deleting it.`
+          );
+          return;
+        }
+
         setErrorMessage(
           `Unable to delete ${item.name}. It is the last ${activeCatalog.singular}, so it must remain available.`
         );
@@ -534,10 +544,16 @@ export function SettingsPage() {
       closeDeleteDialog();
     } catch (error) {
       if (error?.status === 409) {
-        closeDeleteDialog();
-        setErrorMessage(
-          `Unable to delete ${item.name}. It is the last ${activeCatalog.singular}, so it must remain available.`
-        );
+        if (activeItems.length > 1) {
+          setErrorMessage(
+            `${item.name} is still being used by one or more issues. Please choose a replacement and try again.`
+          );
+        } else {
+          closeDeleteDialog();
+          setErrorMessage(
+            `Unable to delete ${item.name}. It is the last ${activeCatalog.singular}, so it must remain available.`
+          );
+        }
         return;
       }
 

@@ -85,7 +85,7 @@ Refactor database queries`}
             {error ? <p className="form-error">{error}</p> : null}
 
             <div className="form-actions">
-              <button className="button" type="button" onClick={() => navigate("/issues")}>
+              <button className="btn btn-secondary" type="button" onClick={() => navigate("/issues")}>
                 Cancel
               </button>
               <button className="button button-primary" type="submit" disabled={saving || !titles.trim()}>
