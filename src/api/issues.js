@@ -55,7 +55,7 @@ export function assignMe(apiKey, issueId) {
 export function unassignMe(apiKey, issueId) {
   return apiRequest(`/api/issues/${issueId}/unassign-me/`, {
     apiKey,
-    method: "POST",
+    method: "DELETE",
   });
 }
 
@@ -69,7 +69,27 @@ export function watchIssue(apiKey, issueId) {
 export function unwatchIssue(apiKey, issueId) {
   return apiRequest(`/api/issues/${issueId}/unwatch/`, {
     apiKey,
+    method: "DELETE",
+  });
+}
+
+export function applyAssignee(apiKey, issueId, assigneeUsername) {
+  return apiRequest(`/api/issues/${issueId}/assignees/apply/`, {
+    apiKey,
     method: "POST",
+    body: JSON.stringify({
+      assignee_username: assigneeUsername || null,
+    }),
+  });
+}
+
+export function applyWatchers(apiKey, issueId, watcherUsernames) {
+  return apiRequest(`/api/issues/${issueId}/watchers/apply/`, {
+    apiKey,
+    method: "POST",
+    body: JSON.stringify({
+      watcher_usernames: watcherUsernames,
+    }),
   });
 }
 

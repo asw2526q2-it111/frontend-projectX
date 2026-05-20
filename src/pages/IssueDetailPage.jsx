@@ -1,9 +1,12 @@
 import { Eye, UserCheck, UserMinus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { EmptyState } from "../components/EmptyState";
 import { LoadingState } from "../components/LoadingState";
 import { StatusPill } from "../components/StatusPill";
 import {
+  applyAssignee,
+  applyWatchers,
   assignMe,
   createIssueComment,
   deleteIssueComment,
@@ -15,10 +18,73 @@ import {
   updateIssueComment,
   watchIssue,
 } from "../api/issues";
-import { EmptyState } from "../components/EmptyState";
+import { listUsers } from "../api/users";
 import { useCurrentUser } from "../context/currentUser";
 import { useAsync } from "../hooks/useAsync";
 import { formatDate, initials } from "../utils/format";
+
+function getResults(payload) {
+  return Array.isArray(payload?.results) ? payload.results : [];
+}
+
+function normalizeIdentity(value) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function getActionErrorMessage(error, fallback) {
+  if (error?.details?.detail) return String(error.details.detail);
+
+  if (error?.details && typeof error.details === "object") {
+    const firstEntry = Object.entries(error.details)[0];
+    if (firstEntry) {
+      const [field, messages] = firstEntry;
+      const message = Array.isArray(messages) ? messages[0] : messages;
+      return `${field}: ${message}`;
+    }
+  }
+
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
+}
+
+function createCurrentUserFallback(currentUser) {
+  const fullName = currentUser?.fullName || currentUser?.username || "User";
+
+  return {
+    username: currentUser?.username || "",
+    full_name: fullName,
+    initials: initials(fullName),
+    avatar_url: "",
+  };
+}
+
+function findCurrentApiUser(users, currentUser) {
+  const targetUsername = normalizeIdentity(currentUser?.username);
+  const targetFullName = normalizeIdentity(currentUser?.fullName);
+
+  return (
+    users.find((user) => {
+      const username = normalizeIdentity(user.username);
+      const fullName = normalizeIdentity(user.full_name);
+      return (targetUsername && username === targetUsername) || (targetFullName && fullName === targetFullName);
+    }) ?? createCurrentUserFallback(currentUser)
+  );
+}
+
+function renderUserAvatar(user) {
+  const userInitials = user.initials ?? initials(user.full_name ?? user.username);
+  const avatarUrl = user.avatar_url || user.avatar;
+
+  if (avatarUrl) {
+    return <img className="avatar avatar--sm" src={avatarUrl} alt={`Avatar de ${user.username}`} />;
+  }
+
+  return (
+    <div className="avatar avatar--sm" aria-hidden="true">
+      {userInitials}
+    </div>
+  );
+}
 
 export function IssueDetailPage() {
   const { issueId } = useParams();
@@ -28,20 +94,41 @@ export function IssueDetailPage() {
   const [editingCommentContent, setEditingCommentContent] = useState("");
   const [commentActionError, setCommentActionError] = useState("");
   const [commentActionLoading, setCommentActionLoading] = useState(false);
-  const [discussionView, setDiscussionView] = useState("comments"); //Per saber quina pestanya s'esta mostrant a discussion box
+  const [discussionView, setDiscussionView] = useState("comments");
+  const [issueActionError, setIssueActionError] = useState("");
+  const [issueActionLoading, setIssueActionLoading] = useState(false);
+  const [assigneeSelection, setAssigneeSelection] = useState("");
+  const [watcherSelection, setWatcherSelection] = useState([]);
 
-  const issueState = useAsync(() => getIssue(currentUser.apiKey, issueId), [
-    currentUser.apiKey,
-    issueId,
-  ]);
-  const commentsState = useAsync(() => listIssueComments(currentUser.apiKey, issueId), [
-    currentUser.apiKey,
-    issueId,
-  ]);
+  const issueState = useAsync(() => getIssue(currentUser.apiKey, issueId), [currentUser.apiKey, issueId]);
+  const commentsState = useAsync(() => listIssueComments(currentUser.apiKey, issueId), [currentUser.apiKey, issueId]);
   const activitiesState = useAsync(() => listIssueActivities(currentUser.apiKey, issueId), [
     currentUser.apiKey,
     issueId,
   ]);
+  const usersState = useAsync(() => listUsers(currentUser.apiKey), [currentUser.apiKey]);
+
+  useEffect(() => {
+    if (!issueState.data) return;
+
+    setAssigneeSelection(issueState.data.assignee?.username ?? "");
+    setWatcherSelection((issueState.data.watchers ?? []).map((watcher) => watcher.username));
+  }, [issueState.data]);
+
+  async function runIssueAction(action, fallback) {
+    setIssueActionLoading(true);
+    setIssueActionError("");
+
+    try {
+      await action();
+      await issueState.reload();
+      void activitiesState.reload();
+    } catch (error) {
+      setIssueActionError(getActionErrorMessage(error, fallback));
+    } finally {
+      setIssueActionLoading(false);
+    }
+  }
 
   async function submitComment(event) {
     event.preventDefault();
@@ -51,20 +138,14 @@ export function IssueDetailPage() {
     await commentsState.reload();
   }
 
-  function getActionErrorMessage(error, fallback) {
-    if (error?.details?.detail) return String(error.details.detail);
-    if (error instanceof Error && error.message) return error.message;
-    return fallback;
+  function isCommentOwner(commentItem) {
+    return commentItem.created_by?.username === currentUser.username;
   }
 
-  function isCommentOwner(comment) {
-    return comment.created_by?.username === currentUser.username;
-  }
-
-  function startEditingComment(comment) {
+  function startEditingComment(commentItem) {
     setCommentActionError("");
-    setEditingCommentId(comment.id);
-    setEditingCommentContent(comment.content);
+    setEditingCommentId(commentItem.id);
+    setEditingCommentContent(commentItem.content);
   }
 
   function cancelEditingComment() {
@@ -88,9 +169,7 @@ export function IssueDetailPage() {
       cancelEditingComment();
       await commentsState.reload();
     } catch (error) {
-      setCommentActionError(
-        getActionErrorMessage(error, "No s'ha pogut guardar el comentari.")
-      );
+      setCommentActionError(getActionErrorMessage(error, "No s'ha pogut guardar el comentari."));
     } finally {
       setCommentActionLoading(false);
     }
@@ -107,32 +186,10 @@ export function IssueDetailPage() {
       if (String(editingCommentId) === String(commentId)) cancelEditingComment();
       await commentsState.reload();
     } catch (error) {
-      setCommentActionError(
-        getActionErrorMessage(error, "No s'ha pogut eliminar el comentari.")
-      );
+      setCommentActionError(getActionErrorMessage(error, "No s'ha pogut eliminar el comentari."));
     } finally {
       setCommentActionLoading(false);
     }
-  }
-
-  function renderUserAvatar(user) {
-    const userInitials = user.initials ?? initials(user.full_name ?? user.username);
-
-    if (user.avatar) {
-      return (
-        <img
-          className="avatar avatar--sm"
-          src={user.avatar}
-          alt={`Avatar de ${user.username}`}
-        />
-      );
-    }
-
-    return (
-      <div className="avatar avatar--sm" aria-hidden="true">
-        {userInitials}
-      </div>
-    );
   }
 
   function renderCommentItem(item) {
@@ -196,7 +253,7 @@ export function IssueDetailPage() {
                 disabled={commentActionLoading}
                 onClick={cancelEditingComment}
               >
-                Cancel·lar
+                Cancelar
               </button>
             </div>
           </div>
@@ -239,9 +296,9 @@ export function IssueDetailPage() {
     );
   }
 
-  if (issueState.loading) return <LoadingState />;
+  if (issueState.loading && !issueState.data) return <LoadingState />;
 
-  if (issueState.error || !issueState.data) {
+  if ((issueState.error && !issueState.data) || !issueState.data) {
     return (
       <EmptyState
         title="No s'ha pogut carregar la issue"
@@ -254,11 +311,18 @@ export function IssueDetailPage() {
   const attachments = issue.attachments ?? [];
   const comments = commentsState.data?.results ?? [];
   const activities = activitiesState.data?.results ?? [];
+  const users = getResults(usersState.data);
+  const currentApiUser = findCurrentApiUser(users, currentUser);
+  const isAssignedToCurrentUser =
+    normalizeIdentity(issue.assignee?.username) === normalizeIdentity(currentApiUser.username);
+  const isCurrentUserWatching = (issue.watchers ?? []).some(
+    (watcher) => normalizeIdentity(watcher.username) === normalizeIdentity(currentApiUser.username)
+  );
 
   function mainBox() {
     const creator = issue.created_by;
-    const creatorInitials =
-      creator.initials ?? initials(creator.full_name ?? creator.username);
+    const creatorInitials = creator.initials ?? initials(creator.full_name ?? creator.username);
+    const creatorAvatarUrl = creator.avatar_url || creator.avatar;
     const createdAt = issue.date_created ?? issue.created_at;
 
     return (
@@ -269,12 +333,8 @@ export function IssueDetailPage() {
             <h1 className="main-box__title">{issue.title}</h1>
           </div>
           <div className="main-box__creator">
-            {creator.avatar ? (
-              <img
-                className="avatar avatar--sm"
-                src={creator.avatar}
-                alt={`Avatar de ${creator.username}`}
-              />
+            {creatorAvatarUrl ? (
+              <img className="avatar avatar--sm" src={creatorAvatarUrl} alt={`Avatar de ${creator.username}`} />
             ) : (
               <div className="avatar avatar--sm" aria-hidden="true">
                 {creatorInitials}
@@ -356,12 +416,10 @@ export function IssueDetailPage() {
                 Publicar
               </button>
             </form>
-            {commentActionError ? (
-              <p className="form-error comment-action-error">{commentActionError}</p>
-            ) : null}
+            {commentActionError ? <p className="form-error comment-action-error">{commentActionError}</p> : null}
             <div className="comment-list">
               {comments.length > 0 ? (
-                comments.map((item) => renderCommentItem(item)) //prepara la box de cada comentari, amb els botons si calen
+                comments.map((item) => renderCommentItem(item))
               ) : (
                 <p className="muted">Encara no hi ha comentaris.</p>
               )}
@@ -386,10 +444,191 @@ export function IssueDetailPage() {
   function lateralBox() {
     return (
       <section className="panel issue-detail-lateral-panel" aria-label="Issue metadata">
-        {/* Status section */}
-        {/* Assigned section */}
-        {/* Watchers section */}
-        {/* Buttons section */}
+        <section className="issue-detail-sidebar-section">
+          <h2 className="issue-detail-sidebar-title">Metadata</h2>
+          <div className="issue-detail-meta-list">
+            {issue.status ? <StatusPill item={issue.status} /> : null}
+            {issue.type ? <StatusPill item={issue.type} /> : null}
+            {issue.priority ? <StatusPill item={issue.priority} /> : null}
+            {issue.severity ? <StatusPill item={issue.severity} /> : null}
+            {(issue.tags ?? []).map((tag) => (
+              <StatusPill key={tag.name} item={tag} />
+            ))}
+          </div>
+        </section>
+
+        <section className="issue-detail-sidebar-section">
+          <div className="issue-detail-sidebar-header">
+            <h2 className="issue-detail-sidebar-title">Assigned</h2>
+            <button
+              className={`button issue-detail-inline-action${isAssignedToCurrentUser ? " button-danger" : ""}`}
+              type="button"
+              disabled={issueActionLoading}
+              onClick={() =>
+                void runIssueAction(
+                  () =>
+                    isAssignedToCurrentUser
+                      ? unassignMe(currentUser.apiKey, issueId)
+                      : assignMe(currentUser.apiKey, issueId),
+                  isAssignedToCurrentUser
+                    ? "No s'ha pogut desassignar la issue."
+                    : "No s'ha pogut assignar la issue."
+                )
+              }
+            >
+              {isAssignedToCurrentUser ? <UserMinus size={15} aria-hidden="true" /> : <UserCheck size={15} aria-hidden="true" />}
+              {isAssignedToCurrentUser ? "Unassign" : "Assign me"}
+            </button>
+          </div>
+
+          {issue.assignee ? (
+            <div className="issue-detail-person-card">
+              {renderUserAvatar(issue.assignee)}
+              <div className="issue-detail-person-copy">
+                <strong>{issue.assignee.full_name ?? issue.assignee.username}</strong>
+                <span>@{issue.assignee.username}</span>
+              </div>
+            </div>
+          ) : (
+            <p className="muted">No one is assigned yet.</p>
+          )}
+
+          {usersState.error ? <p className="form-error">{usersState.error.message}</p> : null}
+
+          <div className="issue-detail-selector">
+            <label className="issue-detail-selector-label" htmlFor="detail-assignee-select">
+              Choose assignee
+            </label>
+            <select
+              id="detail-assignee-select"
+              value={assigneeSelection}
+              disabled={issueActionLoading || usersState.loading}
+              onChange={(event) => setAssigneeSelection(event.target.value)}
+            >
+              <option value="">Unassigned</option>
+              {users.map((user) => (
+                <option key={user.username} value={user.username}>
+                  {user.full_name ?? user.username} (@{user.username})
+                </option>
+              ))}
+            </select>
+            <button
+              className="button"
+              type="button"
+              disabled={issueActionLoading || usersState.loading}
+              onClick={() =>
+                void runIssueAction(
+                  () => applyAssignee(currentUser.apiKey, issueId, assigneeSelection),
+                  "No s'ha pogut actualitzar l'assignacio."
+                )
+              }
+            >
+              Apply assignee
+            </button>
+          </div>
+        </section>
+
+        <section className="issue-detail-sidebar-section">
+          <div className="issue-detail-sidebar-header">
+            <h2 className="issue-detail-sidebar-title">Watchers</h2>
+            <button
+              className={`button issue-detail-inline-action${isCurrentUserWatching ? " button-danger" : ""}`}
+              type="button"
+              disabled={issueActionLoading}
+              onClick={() =>
+                void runIssueAction(
+                  () =>
+                    isCurrentUserWatching
+                      ? unwatchIssue(currentUser.apiKey, issueId)
+                      : watchIssue(currentUser.apiKey, issueId),
+                  isCurrentUserWatching
+                    ? "No s'ha pogut deixar de seguir la issue."
+                    : "No s'ha pogut seguir la issue."
+                )
+              }
+            >
+              <Eye size={15} aria-hidden="true" />
+              {isCurrentUserWatching ? "Unwatch" : "Watch me"}
+            </button>
+          </div>
+
+          {(issue.watchers ?? []).length > 0 ? (
+            <div className="issue-detail-people-list">
+              {issue.watchers.map((watcher) => (
+                <div className="issue-detail-person-card" key={watcher.username}>
+                  {renderUserAvatar(watcher)}
+                  <div className="issue-detail-person-copy">
+                    <strong>{watcher.full_name ?? watcher.username}</strong>
+                    <span>@{watcher.username}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="muted">No watchers yet.</p>
+          )}
+
+          {usersState.error ? <p className="form-error">{usersState.error.message}</p> : null}
+
+          <div className="issue-detail-selector">
+            <span className="issue-detail-selector-label">Replace watchers</span>
+            <div className="issue-detail-watchers-options">
+              {users.map((user) => {
+                const isSelected = watcherSelection.some(
+                  (username) => normalizeIdentity(username) === normalizeIdentity(user.username)
+                );
+
+                return (
+                  <label className="issue-detail-watcher-option" key={user.username}>
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      disabled={issueActionLoading || usersState.loading}
+                      onChange={(event) => {
+                        if (event.target.checked) {
+                          setWatcherSelection((current) =>
+                            current.some(
+                              (username) => normalizeIdentity(username) === normalizeIdentity(user.username)
+                            )
+                              ? current
+                              : [...current, user.username]
+                          );
+                          return;
+                        }
+
+                        setWatcherSelection((current) =>
+                          current.filter(
+                            (username) => normalizeIdentity(username) !== normalizeIdentity(user.username)
+                          )
+                        );
+                      }}
+                    />
+                    {renderUserAvatar(user)}
+                    <span className="issue-detail-person-copy">
+                      <strong>{user.full_name ?? user.username}</strong>
+                      <span>@{user.username}</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+            <button
+              className="button"
+              type="button"
+              disabled={issueActionLoading || usersState.loading}
+              onClick={() =>
+                void runIssueAction(
+                  () => applyWatchers(currentUser.apiKey, issueId, watcherSelection),
+                  "No s'han pogut actualitzar els watchers."
+                )
+              }
+            >
+              Apply watchers
+            </button>
+          </div>
+        </section>
+
+        {issueActionError ? <p className="form-error">{issueActionError}</p> : null}
       </section>
     );
   }
@@ -409,9 +648,7 @@ export function IssueDetailPage() {
             {discussionBox()}
           </div>
 
-          <aside className="right-panel issue-detail-sidebar">
-            {lateralBox()}
-          </aside>
+          <aside className="right-panel issue-detail-sidebar">{lateralBox()}</aside>
         </div>
       </div>
     </div>
