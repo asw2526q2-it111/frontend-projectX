@@ -1,15 +1,10 @@
-import { ArrowLeft, PencilLine, RefreshCw, Settings2, Trash2 } from "lucide-react";
+import { ArrowLeft, PencilLine, Plus, Settings2, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingState } from "../components/LoadingState";
 import { useCurrentUser } from "../context/currentUser";
-import {
-  createLookup,
-  deleteLookup,
-  listLookup,
-  updateLookup,
-} from "../api/lookups";
+import { createLookup, deleteLookup, listLookup, updateLookup } from "../api/lookups";
 
 const CATALOGS = {
   statuses: {
@@ -17,10 +12,9 @@ const CATALOGS = {
     singular: "status",
     resource: "statuses",
     description: "Workflow states that define where an issue is in the process.",
-    accent: "#0d8aa8",
     fields: [
-      { name: "name", label: "Name", type: "text", required: true, placeholder: "Open" },
-      { name: "color", label: "Color", type: "color", required: true },
+      { name: "name", label: "Name", type: "text", placeholder: "Open" },
+      { name: "color", label: "Color", type: "color" },
       { name: "is_closed", label: "Closed status", type: "checkbox" },
     ],
     defaultValues: { name: "", color: "#0d8aa8", is_closed: false },
@@ -30,10 +24,9 @@ const CATALOGS = {
     singular: "type",
     resource: "types",
     description: "Issue categories used to group similar work.",
-    accent: "#6c5ce7",
     fields: [
-      { name: "name", label: "Name", type: "text", required: true, placeholder: "Bug" },
-      { name: "color", label: "Color", type: "color", required: true },
+      { name: "name", label: "Name", type: "text", placeholder: "Bug" },
+      { name: "color", label: "Color", type: "color" },
     ],
     defaultValues: { name: "", color: "#6c5ce7" },
   },
@@ -42,10 +35,9 @@ const CATALOGS = {
     singular: "priority",
     resource: "priorities",
     description: "Urgency levels that help the team decide what to tackle first.",
-    accent: "#e17055",
     fields: [
-      { name: "name", label: "Name", type: "text", required: true, placeholder: "High" },
-      { name: "color", label: "Color", type: "color", required: true },
+      { name: "name", label: "Name", type: "text", placeholder: "High" },
+      { name: "color", label: "Color", type: "color" },
     ],
     defaultValues: { name: "", color: "#e17055" },
   },
@@ -54,10 +46,9 @@ const CATALOGS = {
     singular: "severity",
     resource: "severities",
     description: "Impact levels that describe how serious an issue is.",
-    accent: "#f39c12",
     fields: [
-      { name: "name", label: "Name", type: "text", required: true, placeholder: "Critical" },
-      { name: "color", label: "Color", type: "color", required: true },
+      { name: "name", label: "Name", type: "text", placeholder: "Critical" },
+      { name: "color", label: "Color", type: "color" },
     ],
     defaultValues: { name: "", color: "#f39c12" },
   },
@@ -66,10 +57,9 @@ const CATALOGS = {
     singular: "tag",
     resource: "tags",
     description: "Free-form labels that can be attached to one or many issues.",
-    accent: "#c084fc",
     fields: [
-      { name: "name", label: "Name", type: "text", required: true, placeholder: "frontend" },
-      { name: "color", label: "Color", type: "color", required: true },
+      { name: "name", label: "Name", type: "text", placeholder: "frontend" },
+      { name: "color", label: "Color", type: "color" },
     ],
     defaultValues: { name: "", color: "#c084fc" },
   },
@@ -78,22 +68,14 @@ const CATALOGS = {
     singular: "due date status",
     resource: "due-dates",
     description: "Buckets for deadlines, such as items due before or after a target date.",
-    accent: "#647084",
     fields: [
-      { name: "name", label: "Name", type: "text", required: true, placeholder: "Due soon" },
-      { name: "color", label: "Color", type: "color", required: true },
-      {
-        name: "days_to_due_date",
-        label: "Days to due date",
-        type: "number",
-        required: true,
-        placeholder: "3",
-      },
+      { name: "name", label: "Name", type: "text", placeholder: "Due soon" },
+      { name: "color", label: "Color", type: "color" },
+      { name: "days_to_due_date", label: "Days to due date", type: "number", placeholder: "3" },
       {
         name: "before_after",
         label: "Timing",
         type: "select",
-        required: true,
         options: [
           { value: "before", label: "Before" },
           { value: "after", label: "After" },
@@ -131,10 +113,6 @@ function getErrorMessage(error, fallback) {
   return fallback;
 }
 
-function createEmptyCatalogState() {
-  return Object.fromEntries(CATALOG_ORDER.map((key) => [key, []]));
-}
-
 function cloneDefaultValues(catalog) {
   return { ...catalog.defaultValues };
 }
@@ -163,6 +141,10 @@ function serializeFormValues(catalog, values) {
     }
 
     if (field.type === "number") {
+      if (value === "" || value === null || value === undefined) {
+        return { error: `${field.label} is required.` };
+      }
+
       const parsedValue = Number(value);
       if (!Number.isInteger(parsedValue)) {
         return { error: `${field.label} must be a whole number.` };
@@ -197,7 +179,7 @@ function formatItemSummary(catalogKey, item) {
 function LookupField({ field, value, onChange }) {
   if (field.type === "checkbox") {
     return (
-      <label className="settings-check-field">
+      <label className="settings-field settings-field--check">
         <input
           type="checkbox"
           checked={Boolean(value)}
@@ -223,7 +205,6 @@ function LookupField({ field, value, onChange }) {
         <input
           type={field.type}
           value={value}
-          min={field.type === "number" ? 0 : undefined}
           placeholder={field.placeholder}
           onChange={(event) => onChange(event.target.value)}
         />
@@ -232,9 +213,75 @@ function LookupField({ field, value, onChange }) {
   );
 }
 
+function SettingsModal({ catalog, mode, value, saving, onClose, onSubmit, onChange }) {
+  if (!catalog) return null;
+
+  return (
+    <div className="settings-modal" role="presentation" onClick={onClose}>
+      <div
+        className="settings-modal__dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${mode === "edit" ? "Edit" : "Create"} ${catalog.singular}`}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="settings-modal__header">
+          <div>
+            <span className="eyebrow">{mode === "edit" ? "Edit" : "Create"}</span>
+            <h3>{mode === "edit" ? `Edit ${catalog.singular}` : `Create ${catalog.singular}`}</h3>
+            <p>{catalog.description}</p>
+          </div>
+
+          <button className="button settings-modal__close" type="button" onClick={onClose}>
+            <X size={16} aria-hidden="true" />
+          </button>
+        </div>
+
+        <form className="settings-modal__form" onSubmit={onSubmit}>
+          <div className="settings-form-grid">
+            {catalog.fields.map((field) => (
+              <LookupField
+                key={field.name}
+                field={field}
+                value={value[field.name]}
+                onChange={(nextValue) =>
+                  onChange((current) => ({
+                    ...current,
+                    [field.name]: nextValue,
+                  }))
+                }
+              />
+            ))}
+          </div>
+
+          <div className="settings-modal__actions">
+            <button className="button" type="button" onClick={onClose} disabled={saving}>
+              Cancel
+            </button>
+            <button className="button button-primary" type="submit" disabled={saving}>
+              {saving ? "Saving..." : mode === "edit" ? "Save changes" : `Create ${catalog.singular}`}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function CatalogRow({ catalogKey, item, onEdit, onDelete }) {
   return (
-    <div className="settings-row">
+    <div
+      className="settings-row"
+      role="button"
+      tabIndex={0}
+      onClick={() => onEdit(item)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onEdit(item);
+        }
+      }}
+    >
       <div className="settings-row__main">
         <span className="settings-dot" style={{ background: item.color || "#647084" }} aria-hidden="true" />
         <div>
@@ -243,16 +290,17 @@ function CatalogRow({ catalogKey, item, onEdit, onDelete }) {
         </div>
       </div>
 
-      <div className="settings-row__actions">
-        <button className="button" type="button" onClick={() => onEdit(item)}>
-          <PencilLine size={15} aria-hidden="true" />
-          Edit
-        </button>
-        <button className="button button-danger" type="button" onClick={() => onDelete(item)}>
-          <Trash2 size={15} aria-hidden="true" />
-          Delete
-        </button>
-      </div>
+      <button
+        className="button button-danger settings-row__delete"
+        type="button"
+        aria-label={`Delete ${item.name}`}
+        onClick={(event) => {
+          event.stopPropagation();
+          onDelete(item);
+        }}
+      >
+        <Trash2 size={15} aria-hidden="true" />
+      </button>
     </div>
   );
 }
@@ -260,94 +308,81 @@ function CatalogRow({ catalogKey, item, onEdit, onDelete }) {
 export function SettingsPage() {
   const { currentUser } = useCurrentUser();
   const [activeCatalogKey, setActiveCatalogKey] = useState("statuses");
-  const [catalogs, setCatalogs] = useState(createEmptyCatalogState);
-  const [catalogErrors, setCatalogErrors] = useState({});
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
   const [saving, setSaving] = useState(false);
-  const [formValues, setFormValues] = useState(() => cloneDefaultValues(CATALOGS.statuses));
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState("create");
   const [editingName, setEditingName] = useState("");
-  const [actionError, setActionError] = useState("");
+  const [formValues, setFormValues] = useState(() => cloneDefaultValues(CATALOGS.statuses));
 
   const activeCatalog = CATALOGS[activeCatalogKey];
   const activeItems = useMemo(
-    () => [...(catalogs[activeCatalogKey] ?? [])].sort((left, right) => left.name.localeCompare(right.name)),
-    [activeCatalogKey, catalogs]
+    () => [...items].sort((left, right) => left.name.localeCompare(right.name)),
+    [items]
   );
-
-  useEffect(() => {
-    setFormValues(cloneDefaultValues(activeCatalog));
-    setEditingName("");
-    setActionError("");
-  }, [activeCatalog]);
 
   useEffect(() => {
     let ignore = false;
 
-    async function loadCatalogs() {
+    async function loadItems() {
       setLoading(true);
-      setCatalogErrors({});
+      setErrorMessage("");
 
       try {
-        const results = await Promise.allSettled(
-          CATALOG_ORDER.map(async (key) => {
-            const catalog = CATALOGS[key];
-            const payload = await listLookup(currentUser.apiKey, catalog.resource);
-            return [key, getResults(payload)];
-          })
-        );
-
+        const payload = await listLookup(currentUser.apiKey, activeCatalog.resource);
         if (ignore) return;
 
-        const nextCatalogs = createEmptyCatalogState();
-        const nextErrors = {};
+        setItems(getResults(payload));
+      } catch (error) {
+        if (ignore) return;
 
-        results.forEach((result, index) => {
-          const key = CATALOG_ORDER[index];
-          if (result.status === "fulfilled") {
-            const [resolvedKey, items] = result.value;
-            nextCatalogs[resolvedKey] = items;
-            return;
-          }
-
-          nextErrors[key] = getErrorMessage(
-            result.reason,
-            `No s'ha pogut carregar ${CATALOGS[key].label.toLowerCase()}.`
-          );
-        });
-
-        setCatalogs(nextCatalogs);
-        setCatalogErrors(nextErrors);
+        setItems([]);
+        setErrorMessage(
+          `Unable to load ${activeCatalog.label.toLowerCase()}. ${getErrorMessage(
+            error,
+            "Check the API connection and try again."
+          )}`
+        );
       } finally {
         if (!ignore) setLoading(false);
       }
     }
 
-    void loadCatalogs();
+    void loadItems();
 
     return () => {
       ignore = true;
     };
-  }, [currentUser.apiKey]);
+  }, [activeCatalog.resource, activeCatalog.label, currentUser.apiKey]);
 
-  async function refreshCatalog(catalogKey) {
-    const catalog = CATALOGS[catalogKey];
-    const payload = await listLookup(currentUser.apiKey, catalog.resource);
-    setCatalogs((current) => ({
-      ...current,
-      [catalogKey]: getResults(payload),
-    }));
-  }
-
-  function startCreate() {
-    setFormValues(cloneDefaultValues(activeCatalog));
+  useEffect(() => {
+    setModalOpen(false);
     setEditingName("");
-    setActionError("");
+    setFormValues(cloneDefaultValues(activeCatalog));
+    setErrorMessage("");
+  }, [activeCatalog]);
+
+  function openCreateModal() {
+    setModalMode("create");
+    setEditingName("");
+    setFormValues(cloneDefaultValues(activeCatalog));
+    setErrorMessage("");
+    setModalOpen(true);
   }
 
-  function startEdit(item) {
-    setFormValues(itemToFormValues(activeCatalog, item));
+  function openEditModal(item) {
+    setModalMode("edit");
     setEditingName(item.name);
-    setActionError("");
+    setFormValues(itemToFormValues(activeCatalog, item));
+    setErrorMessage("");
+    setModalOpen(true);
+  }
+
+  function closeModal() {
+    setModalOpen(false);
+    setErrorMessage("");
   }
 
   async function handleSubmit(event) {
@@ -355,29 +390,27 @@ export function SettingsPage() {
 
     const { payload, error } = serializeFormValues(activeCatalog, formValues);
     if (error) {
-      setActionError(error);
+      setErrorMessage(error);
       return;
     }
 
     setSaving(true);
-    setActionError("");
+    setErrorMessage("");
 
     try {
-      if (editingName) {
+      if (modalMode === "edit") {
         await updateLookup(currentUser.apiKey, activeCatalog.resource, editingName, payload);
       } else {
         await createLookup(currentUser.apiKey, activeCatalog.resource, payload);
       }
 
-      await refreshCatalog(activeCatalogKey);
-      startCreate();
-    } catch (lookupError) {
-      setActionError(
-        getErrorMessage(
-          lookupError,
-          `No s'ha pogut ${editingName ? "actualitzar" : "crear"} ${activeCatalog.singular}.`
-        )
-      );
+      const refreshed = await listLookup(currentUser.apiKey, activeCatalog.resource);
+      setItems(getResults(refreshed));
+      closeModal();
+      setFormValues(cloneDefaultValues(activeCatalog));
+      setEditingName("");
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error, `Unable to save ${activeCatalog.singular}.`));
     } finally {
       setSaving(false);
     }
@@ -387,17 +420,18 @@ export function SettingsPage() {
     if (!window.confirm(`Delete ${item.name}?`)) return;
 
     setSaving(true);
-    setActionError("");
+    setErrorMessage("");
 
     try {
       await deleteLookup(currentUser.apiKey, activeCatalog.resource, item.name);
-      await refreshCatalog(activeCatalogKey);
+      const refreshed = await listLookup(currentUser.apiKey, activeCatalog.resource);
+      setItems(getResults(refreshed));
 
-      if (editingName === item.name) {
-        startCreate();
+      if (modalOpen && editingName === item.name) {
+        closeModal();
       }
-    } catch (lookupError) {
-      setActionError(getErrorMessage(lookupError, `No s'ha pogut eliminar ${activeCatalog.singular}.`));
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error, `Unable to delete ${activeCatalog.singular}.`));
     } finally {
       setSaving(false);
     }
@@ -407,7 +441,6 @@ export function SettingsPage() {
     <section className="page-stack settings-page">
       <div className="section-header settings-header">
         <div>
-          <span className="eyebrow">Configuration</span>
           <h2>Catalog settings</h2>
           <p>Manage the lookup values used across issue creation and filtering.</p>
         </div>
@@ -418,9 +451,7 @@ export function SettingsPage() {
         </Link>
       </div>
 
-      {loading ? <LoadingState /> : null}
-
-      <div className="settings-layout">
+      <div className="settings-shell">
         <aside className="panel settings-sidebar">
           <div className="settings-sidebar__title">
             <Settings2 size={18} aria-hidden="true" />
@@ -430,8 +461,6 @@ export function SettingsPage() {
           <div className="settings-nav">
             {CATALOG_ORDER.map((key) => {
               const catalog = CATALOGS[key];
-              const itemCount = catalogs[key]?.length ?? 0;
-              const hasError = Boolean(catalogErrors[key]);
 
               return (
                 <button
@@ -442,9 +471,7 @@ export function SettingsPage() {
                 >
                   <span>
                     <strong>{catalog.label}</strong>
-                    <small>{itemCount} items</small>
                   </span>
-                  {hasError ? <span className="settings-nav-item__error">!</span> : null}
                 </button>
               );
             })}
@@ -455,74 +482,53 @@ export function SettingsPage() {
           <div className="settings-panel__header">
             <div>
               <span className="eyebrow">{activeCatalog.label}</span>
-              <h3>{editingName ? `Edit ${activeCatalog.singular}` : `Create ${activeCatalog.singular}`}</h3>
+              <h3>{activeCatalog.label}</h3>
               <p>{activeCatalog.description}</p>
             </div>
 
-            <button className="button" type="button" onClick={startCreate} disabled={saving}>
-              <RefreshCw size={16} aria-hidden="true" />
-              Reset form
+            <button className="button button-primary" type="button" onClick={openCreateModal}>
+              <Plus size={16} aria-hidden="true" />
+              Create
             </button>
           </div>
 
-          {catalogErrors[activeCatalogKey] ? (
-            <p className="form-error">{catalogErrors[activeCatalogKey]}</p>
-          ) : null}
+          {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
+          {loading ? <LoadingState /> : null}
 
-          <form className="settings-form" onSubmit={handleSubmit}>
-            <div className="settings-form-grid">
-              {activeCatalog.fields.map((field) => (
-                <LookupField
-                  key={field.name}
-                  field={field}
-                  value={formValues[field.name]}
-                  onChange={(value) =>
-                    setFormValues((current) => ({
-                      ...current,
-                      [field.name]: value,
-                    }))
-                  }
-                />
-              ))}
-            </div>
-
-            {actionError ? <p className="form-error">{actionError}</p> : null}
-
-            <div className="settings-form-actions">
-              <button className="button" type="button" onClick={startCreate} disabled={saving}>
-                Cancel
-              </button>
-              <button className="button button-primary" type="submit" disabled={saving}>
-                {saving ? "Saving..." : editingName ? "Save changes" : `Create ${activeCatalog.singular}`}
-              </button>
-            </div>
-          </form>
-
-          <div className="settings-list-header">
-            <h3>Current values</h3>
-            <span>{activeItems.length} total</span>
-          </div>
-
-          {activeItems.length > 0 ? (
+          {!loading && activeItems.length > 0 ? (
             <div className="settings-list">
               {activeItems.map((item) => (
                 <CatalogRow
                   key={item.name}
                   catalogKey={activeCatalogKey}
                   item={item}
-                  onEdit={startEdit}
+                  onEdit={openEditModal}
                   onDelete={handleDelete}
                 />
               ))}
             </div>
-          ) : loading ? null : (
+          ) : null}
+
+          {!loading && activeItems.length === 0 && !errorMessage ? (
             <EmptyState
               title={`No ${activeCatalog.label.toLowerCase()} yet`}
               description={`Create the first ${activeCatalog.singular} to start using it in the app.`}
             />
-          )}
+          ) : null}
         </main>
       </div>
+
+      {modalOpen ? (
+        <SettingsModal
+          catalog={activeCatalog}
+          mode={modalMode}
+          value={formValues}
+          saving={saving}
+          onClose={closeModal}
+          onSubmit={handleSubmit}
+          onChange={setFormValues}
+        />
+      ) : null}
     </section>
   );
 }
