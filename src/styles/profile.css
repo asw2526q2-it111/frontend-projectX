@@ -54,23 +54,24 @@
   border-radius: 14px;
 }
 
-.profile-page-wrapper .profile-avatar-large {
-  width: 120px;
-  height: 120px;
-  margin: 0 auto 1rem;
-  border-radius: 50%;
+/* 🚀 Aquí está la nueva clase sin el borde blanco */
+.profile-avatar-hero {
+  width: 180px;
+  height: 180px;
+  margin: 0 auto 1.5rem;
+  border-radius: 16px;
   background: linear-gradient(135deg, #0d8aa8, #23a5c6);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2.5rem;
+  font-size: 4rem;
   font-weight: bold;
   overflow: hidden;
 }
 
-.profile-page-wrapper img.profile-avatar-large,
-.profile-page-wrapper .profile-avatar-large img {
+.profile-page-wrapper img.profile-avatar-hero,
+.profile-page-wrapper .profile-avatar-hero img {
   width: 100%;
   height: 100%;
   object-fit: cover;

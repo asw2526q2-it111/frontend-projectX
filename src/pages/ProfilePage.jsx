@@ -59,7 +59,8 @@ export function ProfilePage() {
       <main className="profile-layout">
         <aside className="profile-sidebar">
           <section className="profile-sidebar-panel">
-            <div className="profile-avatar-large">
+            {/* 🚀 Aquí está el cambio al nuevo nombre de clase */}
+            <div className="profile-avatar-hero">
               {user.avatar_url ? (
                 <img src={user.avatar_url} alt={`${user.username} avatar`} />
               ) : (
