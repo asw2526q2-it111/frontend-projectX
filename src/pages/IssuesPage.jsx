@@ -12,7 +12,7 @@ import { LoadingState } from "../components/LoadingState";
 import { listIssues } from "../api/issues";
 import { useCurrentUser } from "../context/currentUser";
 import { useAsync } from "../hooks/useAsync";
-import { formatDate } from "../utils/format";
+import { formatDate, initials } from "../utils/format";
 
 const TABLE_SORTS = [
   { value: "type", label: "Type" },
