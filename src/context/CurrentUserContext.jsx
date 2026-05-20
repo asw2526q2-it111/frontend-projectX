@@ -48,6 +48,7 @@ export function CurrentUserProvider({ children }) {
         currentUserDetails?.fullName ??
         selectedUser.fullName ??
         selectedUser.username,
+      initials: currentUserDetails?.initials ?? selectedUser.initials,
     };
 
     return {

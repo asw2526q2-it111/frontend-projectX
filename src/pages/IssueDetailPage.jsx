@@ -184,7 +184,7 @@ function IssueDetailWorkspace({ headerSubtitle, headerUser, children }) {
           </Link>
           <Link className="button issue-profile-button" to={`/profile/${currentUser.username}`}>
             <UserAvatar user={topbarUser} variant="topbar" />
-            {currentUser.username}
+            <span className="issue-profile-button__label">{currentUser.username}</span>
           </Link>
         </div>
       </header>

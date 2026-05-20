@@ -5,7 +5,6 @@ import { EmptyState } from "../components/EmptyState";
 import { LoadingState } from "../components/LoadingState";
 import { useCurrentUser } from "../context/currentUser";
 import { useAsync } from "../hooks/useAsync";
-import { UserSwitcher } from "../components/UserSwitcher"; 
 import { ProfileCommentsList } from "../components/ProfileCommentsList";
 import { ProfileIssuesTable } from "../components/ProfileIssuesTable";
 import "../styles/profile.css";
@@ -48,8 +47,6 @@ export function ProfilePage() {
         </div>
         
         <div className="topbar-actions" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <UserSwitcher />
-          
           <Link className="btn btn-secondary" to="/issues">
             &larr; Back to issues
           </Link>
