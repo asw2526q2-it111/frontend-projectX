@@ -68,6 +68,8 @@
   font-size: 4rem;
   font-weight: bold;
   overflow: hidden;
+  border: 4px solid white;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
 .profile-page-wrapper img.profile-avatar-hero,
