@@ -293,17 +293,12 @@ function TagPicker({ options, selectedTags, isOpen, onToggle, onAdd, onRemove, o
   );
 }
 
-function AssigneePicker({ users, selectedUsername, currentUser, isOpen, onToggle, onClose, onChange }) {
+function AssigneePicker({ users, selectedUsername, currentUser, onChange }) {
   const selectedUser = findUserByUsername(users, selectedUsername, currentUser);
   const currentDraftUser = getCurrentDraftUser(users, currentUser);
   const isAssignedToCurrentUser =
     currentDraftUser &&
     normalizeIdentity(currentDraftUser.username) === normalizeIdentity(selectedUsername);
-
-  function handleAssigneeChange(nextUsername) {
-    onChange(nextUsername);
-    onClose();
-  }
 
   return (
     <section className="issue-sidebar-section">
@@ -313,68 +308,64 @@ function AssigneePicker({ users, selectedUsername, currentUser, isOpen, onToggle
           className={`button create-section-action${isAssignedToCurrentUser ? " button-danger-outline" : ""}`}
           type="button"
           disabled={!currentDraftUser?.username}
-          onClick={() => handleAssigneeChange(isAssignedToCurrentUser ? "" : currentDraftUser.username)}
+          onClick={() => onChange(isAssignedToCurrentUser ? "" : currentDraftUser.username)}
         >
           <UserCheck size={15} aria-hidden="true" />
-          {isAssignedToCurrentUser ? "Unassign" : "Assign me"}
+          {isAssignedToCurrentUser ? "Unassign" : "Assign to me"}
         </button>
       </div>
 
       {selectedUser ? (
-        <div className="create-person-card">
-          <UserAvatar user={selectedUser} size="sm" />
-          <div>
-            <strong>{getUserDisplayName(selectedUser)}</strong>
-            <span>@{selectedUser.username}</span>
+        <div className="create-person-list">
+          <div className="create-person-card">
+            <UserAvatar user={selectedUser} size="sm" />
+            <div>
+              <strong>{getUserDisplayName(selectedUser)}</strong>
+              <span>@{selectedUser.username}</span>
+            </div>
           </div>
         </div>
       ) : (
         <p className="create-empty-text">No one is assigned yet.</p>
       )}
 
-      <PickerContainer
-        className="create-picker--people"
-        isOpen={isOpen}
-        onToggle={onToggle}
-        summary={<span>{selectedUser ? "Change assignee" : "Select assignee"}</span>}
-      >
-        <button
-          className={`create-user-option${!selectedUsername ? " is-selected" : ""}`}
-          type="button"
-          onClick={() => handleAssigneeChange("")}
-        >
-          <span className="create-user-avatar create-user-avatar--sm create-user-avatar--empty">-</span>
-          <span className="create-user-copy">
-            <strong>Unassigned</strong>
-            <small>No assignee</small>
-          </span>
-          {!selectedUsername ? <Check size={15} aria-hidden="true" /> : null}
-        </button>
-        {users.map((user) => (
-          <button
-            className={`create-user-option${
-              normalizeIdentity(user.username) === normalizeIdentity(selectedUsername) ? " is-selected" : ""
-            }`}
-            key={user.username}
-            type="button"
-            onClick={() => handleAssigneeChange(user.username)}
-          >
-            <UserAvatar user={user} size="sm" />
+      <details className="create-people-dropdown" open={Boolean(selectedUser)}>
+        <summary>{selectedUser ? "Change assignee" : "Select assignee"}</summary>
+        <div className="create-people-options">
+          <label className={`create-people-option${!selectedUsername ? " is-selected" : ""}`}>
+            <input type="radio" name="edit-assignee" checked={!selectedUsername} onChange={() => onChange("")} />
+            <span className="create-user-avatar create-user-avatar--sm create-user-avatar--empty">-</span>
             <span className="create-user-copy">
-              <strong>{getUserDisplayName(user)}</strong>
-              <small>@{user.username}</small>
+              <strong>Unassigned</strong>
+              <small>No assignee</small>
             </span>
-            {normalizeIdentity(user.username) === normalizeIdentity(selectedUsername) ? (
-              <Check size={15} aria-hidden="true" />
-            ) : null}
-          </button>
-        ))}
-      </PickerContainer>
+          </label>
+          {users.map((user) => {
+            const isSelected = normalizeIdentity(user.username) === normalizeIdentity(selectedUsername);
+
+            return (
+              <label className={`create-people-option${isSelected ? " is-selected" : ""}`} key={user.username}>
+                <input
+                  type="radio"
+                  name="edit-assignee"
+                  checked={isSelected}
+                  onChange={() => onChange(user.username)}
+                />
+                <UserAvatar user={user} size="sm" />
+                <span className="create-user-copy">
+                  <strong>{getUserDisplayName(user)}</strong>
+                  <small>@{user.username}</small>
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      </details>
     </section>
   );
 }
 
-function WatchersPicker({ users, selectedUsernames, currentUser, isOpen, onToggle, onChange }) {
+function WatchersPicker({ users, selectedUsernames, currentUser, onChange }) {
   const currentDraftUser = getCurrentDraftUser(users, currentUser);
   const selectedSet = new Set(selectedUsernames.map(normalizeIdentity));
   const selectedUsers = mapUsernamesToUsers(selectedUsernames, users, currentUser);
@@ -405,7 +396,7 @@ function WatchersPicker({ users, selectedUsernames, currentUser, isOpen, onToggl
           disabled={!currentDraftUser?.username}
           onClick={() => toggleUser(currentDraftUser.username)}
         >
-          {currentUserIsWatching ? "Unwatch" : "Watch me"}
+          {currentUserIsWatching ? "Unwatch" : "Watch"}
         </button>
       </div>
 
@@ -418,9 +409,6 @@ function WatchersPicker({ users, selectedUsernames, currentUser, isOpen, onToggl
                 <strong>{getUserDisplayName(user)}</strong>
                 <span>@{user.username}</span>
               </div>
-              <button type="button" onClick={() => toggleUser(user.username)} aria-label={`Remove ${user.username}`}>
-                <X size={14} aria-hidden="true" />
-              </button>
             </div>
           ))}
         </div>
@@ -428,38 +416,29 @@ function WatchersPicker({ users, selectedUsernames, currentUser, isOpen, onToggl
         <p className="create-empty-text">No watchers yet.</p>
       )}
 
-      <PickerContainer
-        className="create-picker--people"
-        isOpen={isOpen}
-        onToggle={onToggle}
-        summary={<span>Select watchers{selectedUsers.length ? ` (${selectedUsers.length})` : ""}</span>}
-      >
-        {users.length > 0 ? (
-          users.map((user) => {
-            const isSelected = selectedSet.has(normalizeIdentity(user.username));
+      <details className="create-people-dropdown" open={selectedUsers.length > 0}>
+        <summary>Select watchers{selectedUsers.length ? ` (${selectedUsers.length})` : ""}</summary>
+        <div className="create-people-options">
+          {users.length > 0 ? (
+            users.map((user) => {
+              const isSelected = selectedSet.has(normalizeIdentity(user.username));
 
-            return (
-              <button
-                className={`create-user-option${isSelected ? " is-selected" : ""}`}
-                key={user.username}
-                type="button"
-                onClick={() => toggleUser(user.username)}
-              >
-                <UserAvatar user={user} size="sm" />
-                <span className="create-user-copy">
-                  <strong>{getUserDisplayName(user)}</strong>
-                  <small>@{user.username}</small>
-                </span>
-                <span className={`create-user-check${isSelected ? " is-selected" : ""}`} aria-hidden="true">
-                  {isSelected ? <Check size={13} aria-hidden="true" /> : null}
-                </span>
-              </button>
-            );
-          })
-        ) : (
-          <span className="create-picker-empty">No users available.</span>
-        )}
-      </PickerContainer>
+              return (
+                <label className={`create-people-option${isSelected ? " is-selected" : ""}`} key={user.username}>
+                  <input type="checkbox" checked={isSelected} onChange={() => toggleUser(user.username)} />
+                  <UserAvatar user={user} size="sm" />
+                  <span className="create-user-copy">
+                    <strong>{getUserDisplayName(user)}</strong>
+                    <small>@{user.username}</small>
+                  </span>
+                </label>
+              );
+            })
+          ) : (
+            <span className="create-picker-empty">No users available.</span>
+          )}
+        </div>
+      </details>
     </section>
   );
 }
@@ -900,9 +879,6 @@ export function IssueEditPage() {
                 users={users}
                 selectedUsername={assigneeUsername}
                 currentUser={currentUser}
-                isOpen={openPicker === "assignee"}
-                onToggle={() => togglePicker("assignee")}
-                onClose={closePicker}
                 onChange={setAssigneeUsername}
               />
 
@@ -910,14 +886,12 @@ export function IssueEditPage() {
                 users={users}
                 selectedUsernames={watcherUsernames}
                 currentUser={currentUser}
-                isOpen={openPicker === "watchers"}
-                onToggle={() => togglePicker("watchers")}
                 onChange={setWatcherUsernames}
               />
 
               <section className="issue-sidebar-section create-sidebar-actions">
                 {error ? <p className="form-error">{error}</p> : null}
-                <button className="button" type="button" onClick={() => navigate(`/issues/${issueId}`)}>
+                <button className="button button-secondary" type="button" onClick={() => navigate(`/issues/${issueId}`)}>
                   Cancel
                 </button>
                 <button className="button button-primary" type="submit" disabled={saving || loadingData}>

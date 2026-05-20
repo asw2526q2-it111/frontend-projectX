@@ -239,6 +239,17 @@ a {
   background: linear-gradient(120deg, var(--primary-soft), var(--primary-soft-dark));
 }
 
+.button-secondary {
+  border: 1px solid var(--border);
+  color: #172033;
+  background: #f5f8fb;
+}
+
+.button-secondary:hover:not(:disabled) {
+  background: #ebf0f5;
+  box-shadow: none;
+}
+
 .button-danger {
   border-color: var(--danger);
   color: #ffffff;
@@ -2726,11 +2737,6 @@ img.profile-avatar-large {
   border-radius: 0.85rem;
   padding: 0.45rem 0.55rem;
   background: #fff;
-}
-
-.issue-workspace.issue-detail-page .btn-attachment-upload {
-  min-height: 2.35rem;
-  padding-inline: 0.95rem;
 }
 
 .issue-workspace.issue-detail-page .attachment-sub {

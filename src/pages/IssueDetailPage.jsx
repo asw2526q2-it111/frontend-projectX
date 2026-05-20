@@ -628,16 +628,6 @@ export function IssueDetailPage() {
                 aria-label="Select file to upload"
                 onChange={(event) => void handleAttachmentFileChange(event)}
               />
-              <button
-                className="btn btn-primary btn-attachment-upload"
-                type="button"
-                disabled={attachmentUploadLoading}
-                onClick={() => attachmentFileInputRef.current?.click()}
-                aria-label="Add attachment"
-                title="Add attachment"
-              >
-                Add attachment
-              </button>
             </div>
             <div className="attachment-sub">
               {ATTACHMENT_HELP_FORMATS} {ATTACHMENT_HELP_MAX_SIZE}
