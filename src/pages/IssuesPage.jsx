@@ -6,12 +6,13 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { UserAvatar } from "../components/UserAvatar";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingState } from "../components/LoadingState";
 import { listIssues } from "../api/issues";
 import { useCurrentUser } from "../context/currentUser";
 import { useAsync } from "../hooks/useAsync";
-import { formatDate, initials } from "../utils/format";
+import { formatDate } from "../utils/format";
 
 const TABLE_SORTS = [
   { value: "type", label: "Type" },
@@ -191,8 +192,11 @@ export function IssuesPage() {
 
         <div className="topbar-profile">
           <Link className="button issue-profile-button" to={`/profile/${currentUser.username}`}>
-            <span className="profile-avatar-large">{initials(currentUser.fullName)}</span>
-            {currentUser.username}
+            <UserAvatar
+              user={{ username: currentUser.username, full_name: currentUser.fullName }}
+              variant="topbar"
+            />
+            <span className="issue-profile-button__label">{currentUser.username}</span>
           </Link>
         </div>
       </header>
@@ -363,9 +367,9 @@ export function IssuesPage() {
               <Link className="button button-primary btn-full-center" to="/issues/new">
                 + New issue
               </Link>
-              <button className="button btn-bulk btn-full-center" type="button" onClick={() => void reload()}>
-                + Reload list
-              </button>
+              <Link className="button btn-bulk btn-full-center" to="/bulk-insert">
+                Bulk insert
+              </Link>
             </div>
           </section>
 

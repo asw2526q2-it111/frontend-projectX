@@ -745,7 +745,7 @@ export function IssueCreatePage() {
     <section className="issue-create-page">
       <header className="topbar">
         <div className="brand">
-          <span className="brand-mark">IX</span>
+          <div className="brand-mark">IX</div>
           <div>
             <h1>Issue Hub</h1>
             <p>Create issue</p>

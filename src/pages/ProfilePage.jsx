@@ -1,27 +1,28 @@
-import { useParams } from "react-router-dom";
-import { getUser, listAssignedIssues, listWatchedIssues } from "../api/users";
+import { useState } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { getUser } from "../api/users";
 import { EmptyState } from "../components/EmptyState";
-import { IssueCard } from "../components/IssueCard";
 import { LoadingState } from "../components/LoadingState";
 import { useCurrentUser } from "../context/currentUser";
 import { useAsync } from "../hooks/useAsync";
+import { FRONTEND_USERS } from "../config/users"; 
+import { UserSwitcher } from "../components/UserSwitcher"; 
+import { ProfileIssuesTable } from "../components/ProfileIssuesTable";
+import "../styles/profile.css";
 
 export function ProfilePage() {
   const { username } = useParams();
   const { currentUser } = useCurrentUser();
+  const navigate = useNavigate();
+  const isOwnProfile = currentUser?.username === username;
+  const [activeTab, setActiveTab] = useState("assigned");
 
-  const userState = useAsync(() => getUser(currentUser.apiKey, username), [
-    currentUser.apiKey,
+  const userState = useAsync(() => getUser(currentUser?.apiKey, username), [
+    currentUser?.apiKey,
     username,
   ]);
-  const assignedState = useAsync(() => listAssignedIssues(currentUser.apiKey, username), [
-    currentUser.apiKey,
-    username,
-  ]);
-  const watchedState = useAsync(() => listWatchedIssues(currentUser.apiKey, username), [
-    currentUser.apiKey,
-    username,
-  ]);
+
+  if (!isOwnProfile && activeTab === "watched") setActiveTab("assigned");
 
   if (userState.loading) return <LoadingState />;
 
@@ -37,46 +38,113 @@ export function ProfilePage() {
   const user = userState.data;
 
   return (
-    <section className="page-stack">
-      <div className="profile-header">
-        <div className="avatar">{user.initials}</div>
-        <div>
-          <span className="eyebrow">@{user.username}</span>
-          <h2>{user.full_name}</h2>
-          <p>{user.bio ?? "Aquest usuari encara no te biografia."}</p>
-        </div>
-      </div>
-
-      <div className="stats-grid">
-        <div className="stat">
-          <span>Assignades</span>
-          <strong>{user.assigned_count}</strong>
-        </div>
-        <div className="stat">
-          <span>Seguides</span>
-          <strong>{user.watched_count}</strong>
-        </div>
-      </div>
-
-      <section className="split-grid">
-        <div>
-          <h3>Issues assignades</h3>
-          <div className="issue-list">
-            {assignedState.data?.results.map((issue) => (
-              <IssueCard key={issue.id} issue={issue} />
-            ))}
+    <div className="profile-page-wrapper">
+      <header className="profile-topbar">
+        <div className="brand" style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+          <div className="brand-mark" style={{ width: '2.3rem', height: '2.3rem', borderRadius: '0.6rem', background: 'linear-gradient(145deg, #0d8aa8, #23a5c6)', color: 'white', display: 'grid', placeItems: 'center', fontWeight: 'bold' }}>IX</div>
+          <div>
+            <h1 style={{ margin: 0, fontSize: '1.25rem' }}>Issue Hub</h1>
+            <p style={{ margin: 0, color: '#617487', fontSize: '0.9rem' }}>User Profile</p>
           </div>
         </div>
-
-        <div>
-          <h3>Issues seguides</h3>
-          <div className="issue-list">
-            {watchedState.data?.results.map((issue) => (
-              <IssueCard key={issue.id} issue={issue} />
-            ))}
-          </div>
+        
+        <div className="topbar-actions" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <UserSwitcher />
+          
+          <Link className="btn btn-secondary" to="/issues" style={{ padding: '0.6rem 0.85rem', border: '1px solid #dde6ee', borderRadius: '0.7rem', textDecoration: 'none', color: '#1f2d3d', fontWeight: '600' }}>
+            &larr; Back to issues
+          </Link>
         </div>
-      </section>
-    </section>
+      </header>
+
+      <main className="profile-layout">
+        <aside className="profile-sidebar">
+          <section className="profile-sidebar-panel">
+            <div className="profile-avatar-large">
+              {user.avatar_url ? (
+                <img src={user.avatar_url} alt={`${user.username} avatar`} />
+              ) : (
+                user.initials
+              )}
+            </div>
+            
+            <h2 className="profile-name">{user.full_name || user.username}</h2>
+            <p className="profile-username">@{user.username}</p>
+
+            <div className={`profile-stats-grid ${isOwnProfile ? 'profile-stats-grid--three' : 'profile-stats-grid--two'}`}>
+              <div>
+                <span className="stat-num">{user.assigned_count}</span>
+                <span className="stat-label">Assigned</span>
+              </div>
+              {isOwnProfile && (
+                <div>
+                  <span className="stat-num">{user.watched_count}</span>
+                  <span className="stat-label">Watched</span>
+                </div>
+              )}
+              <div>
+                <span className="stat-num">{user.comments_count}</span>
+                <span className="stat-label">Comments</span>
+              </div>
+            </div>
+
+            <div className="bio-section">
+              {user.bio ? (
+                <p style={{ whiteSpace: "pre-wrap" }}>{user.bio}</p>
+              ) : (
+                <span style={{ color: "#94a3b8", fontStyle: "italic" }}>No bio available.</span>
+              )}
+            </div>
+
+            {isOwnProfile && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '1.5rem' }}>
+                {/* Envolvemos el botón con el Link hacia la ruta de edición */}
+                <Link to={`/profile/${username}/edit`} style={{ textDecoration: 'none' }}>
+                  <button style={{ width: '100%', padding: '0.6rem', background: '#0d8aa8', color: 'white', border: 'none', borderRadius: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}>
+                    Edit Profile
+                  </button>
+                </Link>
+              </div>
+            )}
+          </section>
+        </aside>
+
+        <section className="profile-content">
+          <div className="tabs-header">
+            <div className={`tab-item ${activeTab === 'assigned' ? 'active' : ''}`} onClick={() => setActiveTab('assigned')}>
+              Open Assigned Issues
+            </div>
+            {isOwnProfile && (
+              <div className={`tab-item ${activeTab === 'watched' ? 'active' : ''}`} onClick={() => setActiveTab('watched')}>
+                Watched Issues
+              </div>
+            )}
+            <div className={`tab-item ${activeTab === 'comments' ? 'active' : ''}`} onClick={() => setActiveTab('comments')}>
+              Comments
+            </div>
+          </div>
+
+          <div className="profile-content-body">
+            {activeTab === "assigned" && (
+              <div className="issues-table-wrap">
+                <ProfileIssuesTable username={username} type="assigned" />
+              </div>
+            )}
+            
+            {activeTab === "watched" && (
+              <div className="issues-table-wrap">
+                <ProfileIssuesTable username={username} type="watched" />
+              </div>
+            )}
+
+            {activeTab === "comments" && (
+              <div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>
+                No comments yet.
+              </div>
+            )}
+          </div>
+        </section>
+      </main>
+    </div>
   );
 }

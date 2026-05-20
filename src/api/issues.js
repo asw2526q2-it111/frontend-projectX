@@ -30,6 +30,14 @@ export function createIssue(apiKey, payload) {
   });
 }
 
+export function bulkCreateIssues(apiKey, payload) {
+  return apiRequest("/api/issues/bulk/", {
+    apiKey,
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export function updateIssue(apiKey, issueId, payload) {
   return apiRequest(`/api/issues/${issueId}/`, {
     apiKey,
@@ -73,7 +81,7 @@ export function unwatchIssue(apiKey, issueId) {
   });
 }
 
-export function applyAssignee(apiKey, issueId, assigneeUsername) {
+export function applyIssueAssignees(apiKey, issueId, assigneeUsername) {
   return apiRequest(`/api/issues/${issueId}/assignees/apply/`, {
     apiKey,
     method: "POST",
@@ -83,7 +91,7 @@ export function applyAssignee(apiKey, issueId, assigneeUsername) {
   });
 }
 
-export function applyWatchers(apiKey, issueId, watcherUsernames) {
+export function applyIssueWatchers(apiKey, issueId, watcherUsernames) {
   return apiRequest(`/api/issues/${issueId}/watchers/apply/`, {
     apiKey,
     method: "POST",
@@ -93,8 +101,12 @@ export function applyWatchers(apiKey, issueId, watcherUsernames) {
   });
 }
 
-export function listIssueComments(apiKey, issueId) {
-  return apiRequest(`/api/issues/${issueId}/comments/`, { apiKey });
+export function applyAssignee(apiKey, issueId, assigneeUsername) {
+  return applyIssueAssignees(apiKey, issueId, assigneeUsername);
+}
+
+export function applyWatchers(apiKey, issueId, watcherUsernames) {
+  return applyIssueWatchers(apiKey, issueId, watcherUsernames);
 }
 
 export function createIssueComment(apiKey, issueId, content) {
@@ -120,6 +132,43 @@ export function deleteIssueComment(apiKey, commentId) {
   });
 }
 
-export function listIssueActivities(apiKey, issueId) {
+export function getIssueActivities(apiKey, issueId) {
   return apiRequest(`/api/issues/${issueId}/activities/`, { apiKey });
+}
+
+export function listIssueActivities(apiKey, issueId) {
+  return getIssueActivities(apiKey, issueId);
+}
+
+export function getUserAvatar(apiKey, username) {
+  return apiRequest(`/api/users/${username}/avatar/`, { apiKey });
+}
+
+export function getIssueAttachments(apiKey, issueId) {
+  return apiRequest(`/api/issues/${issueId}/attachments/`, { apiKey });
+}
+
+export function createIssueAttachment(apiKey, issueId, file) {
+  const body = new FormData();
+  body.append("attachment", file);
+  return apiRequest(`/api/issues/${issueId}/attachments/`, {
+    apiKey,
+    method: "POST",
+    body,
+  });
+}
+
+export function deleteIssueAttachment(apiKey, attachmentId) {
+  return apiRequest(`/api/attachments/${attachmentId}/`, {
+    apiKey,
+    method: "DELETE",
+  });
+}
+
+export function getIssueComments(apiKey, issueId) {
+  return apiRequest(`/api/issues/${issueId}/comments/`, { apiKey });
+}
+
+export function listIssueComments(apiKey, issueId) {
+  return getIssueComments(apiKey, issueId);
 }
