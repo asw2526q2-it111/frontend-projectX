@@ -14,7 +14,6 @@ import { listIssues } from "../api/issues";
 import { listUsers } from "../api/users";
 import { useCurrentUser } from "../context/currentUser";
 import { useAsync } from "../hooks/useAsync";
-import { formatDate, initials } from "../utils/format";
 import { normalizePagedList } from "../utils/apiList";
 import { formatDate } from "../utils/format";
 import { getUserAvatarUrl, getUserInitials } from "../utils/user";
