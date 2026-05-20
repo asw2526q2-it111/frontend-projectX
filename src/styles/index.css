@@ -1789,7 +1789,7 @@ img.profile-avatar-large {
 .settings-table-row {
   display: grid;
   gap: 0; /* keep row gap for stacked layout */
-  column-gap: 12px; /* separate columns so cells don't touch */
+  column-gap: 18px; /* separate columns so cells don't touch */
   align-items: center;
   padding: 0 10px;
   border: 1px solid #dde6ee;
@@ -1806,7 +1806,7 @@ img.profile-avatar-large {
 .settings-table-head,
 .settings-table-cell {
   min-width: 0;
-  padding: 10px 4px;
+  padding: 10px 10px; 
 }
 
 .settings-table-head {
