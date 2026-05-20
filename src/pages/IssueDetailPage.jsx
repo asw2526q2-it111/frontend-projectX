@@ -137,18 +137,9 @@ function CommentItem({
   );
 }
 
-function UserPickerLabel({ user }) {
-  return (
-    <span className="watchers-item__label">
-      <strong>{getUserDisplayName(user)}</strong>
-      <small>@{user.username}</small>
-    </span>
-  );
-}
-
 function UserPickerOption({ user, inputType, name, checked, disabled = false, onChange }) {
   return (
-    <label className="watchers-item">
+    <label className={`watchers-item${checked ? " is-selected" : ""}`}>
       <input
         type={inputType}
         name={inputType === "radio" ? name : undefined}
@@ -157,7 +148,11 @@ function UserPickerOption({ user, inputType, name, checked, disabled = false, on
         disabled={disabled}
         onChange={onChange}
       />
-      <UserPickerLabel user={user} />
+      <UserAvatar user={user} variant="sidebar" />
+      <span className="watchers-item__label">
+        <strong>{getUserDisplayName(user)}</strong>
+        <small>@{user.username}</small>
+      </span>
     </label>
   );
 }
@@ -808,7 +803,7 @@ export function IssueDetailPage() {
             <details className="watchers-dropdown" open={Boolean(draftAssigneeUsername)}>
               <summary>Select assignee</summary>
               <div className="watchers-list">
-                <label className="watchers-item">
+                <label className={`watchers-item${!draftAssigneeUsername ? " is-selected" : ""}`}>
                   <input
                     type="radio"
                     name="assignee"
@@ -817,7 +812,11 @@ export function IssueDetailPage() {
                     disabled={lateralLoading || usersState.loading}
                     onChange={() => void handleAssigneeSelection("")}
                   />
-                  <span>Unassigned</span>
+                  <span className="issue-user-avatar issue-user-avatar--initials issue-user-avatar--empty">-</span>
+                  <span className="watchers-item__label">
+                    <strong>Unassigned</strong>
+                    <small>No assignee</small>
+                  </span>
                 </label>
                 {users.map((user) => (
                   <UserPickerOption
