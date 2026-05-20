@@ -32,3 +32,11 @@ export async function listUsers(apiKey) {
   const data = await apiRequest("/api/users/", { apiKey });
   return normalizePagedList(data);
 }
+
+export function getUserIssues(apiKey, username, type, query = {}) {
+  return apiRequest(`/api/users/${username}/${type}/`, { apiKey, query });
+}
+
+export function getUserComments(apiKey, username) {
+  return apiRequest(`/api/users/${username}/comments/`, { apiKey });
+}
