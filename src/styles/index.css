@@ -1567,7 +1567,7 @@ img.profile-avatar-large {
 
 .settings-workspace {
   width: 100%;
-  padding: 20px 24px 28px;
+  padding: 20px;
   box-sizing: border-box;
   gap: 18px;
 }
@@ -1665,8 +1665,28 @@ img.profile-avatar-large {
 }
 
 .settings-create-cell {
-  min-width: 170px;
-  flex: 1 1 210px;
+  min-width: 120px;
+  flex: 1 1 150px;
+}
+
+.settings-create-cell--name {
+  max-width: 170px;
+}
+
+.settings-create-cell--color {
+  max-width: 92px;
+}
+
+.settings-create-cell--is_closed {
+  max-width: 120px;
+}
+
+.settings-create-cell--days_to_due_date {
+  max-width: 100px;
+}
+
+.settings-create-cell--before_after {
+  max-width: 130px;
 }
 
 .settings-create-cell .settings-field {
@@ -1675,19 +1695,28 @@ img.profile-avatar-large {
 
 .settings-create-cell .settings-field input,
 .settings-create-cell .settings-field select {
-  min-height: 52px;
-  border-radius: 14px;
+  min-height: 42px;
+  padding: 0 10px;
+  border-radius: 12px;
+}
+
+.settings-create-cell--name .settings-field input {
+  width: 150px;
+}
+
+.settings-create-cell--color .settings-field input[type="color"] {
+  width: 64px;
 }
 
 .settings-create-cell .settings-field--check {
-  min-height: 52px;
+  min-height: 42px;
   padding-top: 0;
 }
 
 .settings-create-button {
-  min-height: 52px;
-  padding: 0 24px;
-  border-radius: 14px;
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 12px;
 }
 
 .settings-error {
@@ -1703,7 +1732,7 @@ img.profile-avatar-large {
   display: grid;
   gap: 0;
   align-items: center;
-  padding: 0 14px;
+  padding: 0 10px;
   border: 1px solid #dde6ee;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.96);
@@ -1718,7 +1747,7 @@ img.profile-avatar-large {
 .settings-table-head,
 .settings-table-cell {
   min-width: 0;
-  padding: 14px 6px;
+  padding: 10px 4px;
 }
 
 .settings-table-head {
@@ -1727,6 +1756,15 @@ img.profile-avatar-large {
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+}
+
+.settings-table-cell--name .settings-field input {
+  width: 150px;
+  max-width: 150px;
+}
+
+.settings-table-cell--color .settings-field input[type="color"] {
+  width: 60px;
 }
 
 .settings-table-cell--center {
@@ -1798,11 +1836,19 @@ img.profile-avatar-large {
 .settings-table-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 6px;
 }
 
 .settings-table-actions .button {
-  min-height: 42px;
+  min-height: 36px;
+  padding: 0 10px;
+  font-size: 0.84rem;
+  border-radius: 10px;
+}
+
+.settings-table-actions .button svg {
+  width: 13px;
+  height: 13px;
 }
 
 .settings-table-actions .button-danger {
@@ -1818,6 +1864,74 @@ img.profile-avatar-large {
 .settings-table-card .state,
 .settings-create-card .state {
   box-shadow: none;
+}
+
+.settings-delete-modal {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.52);
+  z-index: 60;
+}
+
+.settings-delete-dialog {
+  width: min(520px, 100%);
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.24);
+}
+
+.settings-delete-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.settings-delete-header p {
+  margin: 6px 0 0;
+  color: #617487;
+}
+
+.settings-delete-field {
+  display: grid;
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.settings-delete-field span {
+  color: #617487;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.settings-delete-field select {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid #d8e2eb;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.settings-delete-note {
+  margin: 16px 0 0;
+  color: #617487;
+  font-size: 0.9rem;
+}
+
+.settings-delete-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.settings-delete-actions .button {
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
 }
 
 @media (max-width: 1180px) {
@@ -1852,10 +1966,15 @@ img.profile-avatar-large {
   .settings-create-cell {
     min-width: 0;
     flex: 1 1 auto;
+    max-width: none;
   }
 
   .settings-table-row {
     overflow-x: auto;
+  }
+
+  .settings-delete-modal {
+    padding: 12px;
   }
 
   .settings-table-actions {

@@ -5,6 +5,7 @@ import { AppBrand } from "../components/AppBrand";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingState } from "../components/LoadingState";
 import { createLookup, deleteLookup, listLookup, updateLookup } from "../api/lookups";
+import { listIssues, updateIssue } from "../api/issues";
 import { useCurrentUser } from "../context/currentUser";
 
 const CATALOGS = {
@@ -93,6 +94,13 @@ const CATALOGS = {
 };
 
 const CATALOG_ORDER = Object.keys(CATALOGS);
+const REASSIGNABLE_CATALOGS = new Set(["statuses", "types", "priorities", "severities", "tags"]);
+const ISSUE_LOOKUP_FIELDS = {
+  statuses: "status",
+  types: "type",
+  priorities: "priority",
+  severities: "severity",
+};
 
 function getResults(payload) {
   return Array.isArray(payload?.results) ? payload.results : Array.isArray(payload) ? payload : [];
@@ -163,6 +171,65 @@ function serializeFormValues(catalog, values) {
   }
 
   return { payload };
+}
+
+function getLookupName(value) {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "object" && value.name) return String(value.name);
+  return "";
+}
+
+function getTagNames(tags) {
+  if (!Array.isArray(tags)) return [];
+
+  return tags
+    .map((tag) => {
+      if (!tag) return "";
+      if (typeof tag === "string") return tag;
+      if (typeof tag === "object" && tag.name) return String(tag.name);
+      return "";
+    })
+    .filter(Boolean);
+}
+
+function isIssueAffected(issue, catalogKey, lookupName) {
+  if (catalogKey === "tags") {
+    return getTagNames(issue.tags).includes(lookupName);
+  }
+
+  const issueLookupValue = getLookupName(issue?.[ISSUE_LOOKUP_FIELDS[catalogKey] ?? ""]);
+  return issueLookupValue === lookupName;
+}
+
+function buildIssueReplacementPayload(issue, catalogKey, originalName, replacementName) {
+  if (catalogKey === "tags") {
+    const nextTags = getTagNames(issue.tags).map((tagName) => (tagName === originalName ? replacementName : tagName));
+    return { tags: Array.from(new Set(nextTags)) };
+  }
+
+  const fieldNameMap = {
+    statuses: "status",
+    types: "type",
+    priorities: "priority",
+    severities: "severity",
+  };
+
+  return { [fieldNameMap[catalogKey] ?? catalogKey]: replacementName };
+}
+
+function getGridTemplate(catalog) {
+  return getRowFields(catalog)
+    .map((field) => {
+      if (field.name === "color") return "72px";
+      if (field.name === "name") return "minmax(150px, 180px)";
+      if (field.type === "number") return "88px";
+      if (field.type === "checkbox") return "112px";
+      if (field.type === "select") return "minmax(110px, 120px)";
+      return "minmax(120px, 1fr)";
+    })
+    .concat("120px")
+    .join(" ");
 }
 
 function getRowFields(catalog) {
@@ -274,13 +341,14 @@ export function SettingsPage() {
   const [savingCreate, setSavingCreate] = useState(false);
   const [savingRowName, setSavingRowName] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [deleteDialog, setDeleteDialog] = useState(null);
 
   const activeCatalog = CATALOGS[activeCatalogKey];
   const activeItems = useMemo(
     () => [...items].sort((left, right) => left.name.localeCompare(right.name)),
     [items]
   );
-  const rowFieldCount = getRowFields(activeCatalog).length;
+  const rowGridTemplate = useMemo(() => getGridTemplate(activeCatalog), [activeCatalog]);
 
   useEffect(() => {
     let ignore = false;
@@ -350,6 +418,77 @@ export function SettingsPage() {
     setRowDrafts(Object.fromEntries(nextItems.map((item) => [item.name, itemToFormValues(activeCatalog, item)])));
   }
 
+  async function openDeleteDialog(item) {
+    const supportsReplacement = REASSIGNABLE_CATALOGS.has(activeCatalogKey);
+    const replacementOptions = activeItems.filter((option) => option.name !== item.name);
+
+    setDeleteDialog({
+      item,
+      loading: supportsReplacement,
+      supportsReplacement,
+      replacementOptions,
+      replacement: replacementOptions[0]?.name ?? "",
+      affectedCount: 0,
+      affectedIssues: [],
+    });
+
+    if (!supportsReplacement) return;
+
+    try {
+      const payload = await listIssues(currentUser.apiKey);
+      const allIssues = getResults(payload);
+      const affectedIssues = allIssues.filter((issue) => isIssueAffected(issue, activeCatalogKey, item.name));
+
+      setDeleteDialog((current) =>
+        current
+          ? {
+              ...current,
+              loading: false,
+              affectedCount: affectedIssues.length,
+              affectedIssues,
+            }
+          : current
+      );
+    } catch (error) {
+      setDeleteDialog(null);
+      setErrorMessage(getErrorMessage(error, `Unable to inspect issues that use ${item.name}.`));
+    }
+  }
+
+  function closeDeleteDialog() {
+    setDeleteDialog(null);
+  }
+
+  async function confirmDelete() {
+    if (!deleteDialog) return;
+
+    const { item, supportsReplacement, affectedIssues, replacement } = deleteDialog;
+    if (supportsReplacement && affectedIssues.length > 0 && !replacement) {
+      setErrorMessage("Please choose a replacement.");
+      return;
+    }
+
+    setSavingRowName(item.name);
+    setErrorMessage("");
+
+    try {
+      if (supportsReplacement && affectedIssues.length > 0) {
+        const replacementPayloads = affectedIssues.map((issue) =>
+          updateIssue(currentUser.apiKey, issue.id, buildIssueReplacementPayload(issue, activeCatalogKey, item.name, replacement))
+        );
+        await Promise.all(replacementPayloads);
+      }
+
+      await deleteLookup(currentUser.apiKey, activeCatalog.resource, item.name);
+      await refreshCatalog();
+      closeDeleteDialog();
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error, `Unable to delete ${activeCatalog.singular}.`));
+    } finally {
+      setSavingRowName("");
+    }
+  }
+
   async function handleCreate(event) {
     event.preventDefault();
 
@@ -389,22 +528,6 @@ export function SettingsPage() {
       await refreshCatalog();
     } catch (error) {
       setErrorMessage(getErrorMessage(error, `Unable to save ${activeCatalog.singular}.`));
-    } finally {
-      setSavingRowName("");
-    }
-  }
-
-  async function handleDelete(originalName) {
-    if (!window.confirm(`Delete ${originalName}?`)) return;
-
-    setSavingRowName(originalName);
-    setErrorMessage("");
-
-    try {
-      await deleteLookup(currentUser.apiKey, activeCatalog.resource, originalName);
-      await refreshCatalog();
-    } catch (error) {
-      setErrorMessage(getErrorMessage(error, `Unable to delete ${activeCatalog.singular}.`));
     } finally {
       setSavingRowName("");
     }
@@ -454,7 +577,7 @@ export function SettingsPage() {
             <form className="settings-create-form" onSubmit={handleCreate}>
               <div className="settings-create-grid">
                 {activeCatalog.fields.map((field) => (
-                  <div key={field.name} className="settings-create-cell">
+                  <div key={field.name} className={`settings-create-cell settings-create-cell--${field.name}`}>
                     <FieldControl
                       field={field}
                       value={createDraft[field.name]}
@@ -482,7 +605,7 @@ export function SettingsPage() {
               <div className="settings-table">
                 <div
                   className="settings-table-row settings-table-row--header"
-                  style={{ gridTemplateColumns: `72px repeat(${Math.max(rowFieldCount - 1, 1)}, minmax(0, 1fr)) 180px` }}
+                  style={{ gridTemplateColumns: rowGridTemplate }}
                 >
                   {getRowFields(activeCatalog).map((field) => (
                     <div key={field.name} className="settings-table-head">
@@ -501,8 +624,8 @@ export function SettingsPage() {
                     saving={savingRowName === item.name}
                     onChange={handleRowFieldChange}
                     onSave={handleSave}
-                    onDelete={handleDelete}
-                    gridTemplateColumns={`72px repeat(${Math.max(rowFieldCount - 1, 1)}, minmax(0, 1fr)) 180px`}
+                    onDelete={openDeleteDialog}
+                    gridTemplateColumns={rowGridTemplate}
                   />
                 ))}
               </div>
@@ -517,6 +640,71 @@ export function SettingsPage() {
           </section>
         </section>
       </main>
+
+      {deleteDialog ? (
+        <div className="settings-delete-modal" role="presentation" onClick={closeDeleteDialog}>
+          <div className="settings-delete-dialog" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+            <div className="settings-delete-header">
+              <div>
+                <span className="eyebrow">Delete {activeCatalog.singular}</span>
+                <h3>Delete {deleteDialog.item.name}</h3>
+                <p>
+                  {deleteDialog.loading
+                    ? "Checking issues that use this value..."
+                    : deleteDialog.affectedCount > 0
+                      ? `${deleteDialog.affectedCount} issue${deleteDialog.affectedCount === 1 ? "" : "s"} will be reassigned first.`
+                      : "No issues currently use this value."}
+                </p>
+              </div>
+            </div>
+
+            {deleteDialog.supportsReplacement ? (
+              deleteDialog.loading ? (
+                <LoadingState />
+              ) : deleteDialog.affectedCount > 0 ? (
+                deleteDialog.replacementOptions.length > 0 ? (
+                  <label className="settings-delete-field">
+                    <span>Replacement</span>
+                    <select
+                      value={deleteDialog.replacement}
+                      onChange={(event) =>
+                        setDeleteDialog((current) => (current ? { ...current, replacement: event.target.value } : current))
+                      }
+                    >
+                      <option value="">Select replacement</option>
+                      {deleteDialog.replacementOptions.map((option) => (
+                        <option key={option.name} value={option.name}>
+                          {option.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : (
+                  <p className="settings-delete-note">No replacement values are available, so this value cannot be deleted while issues still use it.</p>
+                )
+              ) : (
+                <p className="settings-delete-note">You can delete this value directly because no issues use it.</p>
+              )
+            ) : (
+              <p className="settings-delete-note">This catalog can be deleted directly.</p>
+            )}
+
+            <div className="settings-delete-actions">
+              <button className="button" type="button" onClick={closeDeleteDialog} disabled={savingRowName === deleteDialog.item.name}>
+                Cancel
+              </button>
+              <button
+                className="button button-danger"
+                type="button"
+                onClick={confirmDelete}
+                disabled={savingRowName === deleteDialog.item.name || (deleteDialog.supportsReplacement && deleteDialog.affectedCount > 0 && !deleteDialog.replacement)}
+              >
+                {savingRowName === deleteDialog.item.name ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
