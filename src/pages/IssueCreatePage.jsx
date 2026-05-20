@@ -127,7 +127,7 @@ function UserAvatar({ user, size = "md" }) {
   const className = `create-user-avatar create-user-avatar--${size}`;
 
   if (user?.avatar_url) {
-    return <img className={className} src={user.avatar_url} alt={`Avatar de ${user.username}`} />;
+    return <img className={className} src={user.avatar_url} alt={`${user.username}'s avatar`} />;
   }
 
   return (
@@ -273,7 +273,7 @@ function AssigneePicker({ users, selectedUsername, currentUser, isOpen, onToggle
       <div className="issue-people-header">
         <h3 className="issue-sidebar-title">Assigned</h3>
         <button
-          className={`button create-section-action${isAssignedToCurrentUser ? " button-danger" : ""}`}
+          className={`button create-section-action${isAssignedToCurrentUser ? " button-danger-outline" : ""}`}
           type="button"
           disabled={!currentDraftUser?.username}
           onClick={() => handleAssigneeChange(isAssignedToCurrentUser ? "" : currentDraftUser.username)}
@@ -363,7 +363,7 @@ function WatchersPicker({ users, selectedUsernames, currentUser, isOpen, onToggl
       <div className="issue-people-header">
         <h3 className="issue-sidebar-title">Watchers</h3>
         <button
-          className={`button create-section-action${currentUserIsWatching ? " button-danger" : ""}`}
+          className={`button create-section-action${currentUserIsWatching ? " button-danger-outline" : ""}`}
           type="button"
           disabled={!currentDraftUser?.username}
           onClick={() => toggleUser(currentDraftUser.username)}
@@ -602,7 +602,7 @@ export function IssueCreatePage() {
         }));
       } catch (loadDataError) {
         if (!ignore) {
-          setLoadError(getErrorMessage(loadDataError, "No s'han pogut carregar les dades del formulari."));
+          setLoadError(getErrorMessage(loadDataError, "The form data couldn't be loaded."));
         }
       } finally {
         if (!ignore) setLoadingData(false);
@@ -701,7 +701,7 @@ export function IssueCreatePage() {
 
       setCreateTarget(null);
     } catch (lookupError) {
-      setCreateLookupError(getErrorMessage(lookupError, "No s'ha pogut crear."));
+      setCreateLookupError(getErrorMessage(lookupError, "Could not create the item."));
     } finally {
       setCreatingLookup(false);
     }
@@ -735,7 +735,7 @@ export function IssueCreatePage() {
       });
       navigate(`/issues/${issue.id}`);
     } catch (submitError) {
-      setError(getErrorMessage(submitError, "No s'ha pogut crear la issue."));
+      setError(getErrorMessage(submitError, "The issue couldn't be created."));
     } finally {
       setSaving(false);
     }

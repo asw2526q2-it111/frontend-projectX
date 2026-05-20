@@ -28,8 +28,8 @@ export function ProfilePage() {
   if (userState.error || !userState.data) {
     return (
       <EmptyState
-        title="No s'ha pogut carregar el perfil"
-        description={userState.error?.message ?? "Usuari no trobat."}
+        title="The profile couldn't be loaded"
+        description={userState.error?.message ?? "User not found."}
       />
     );
   }

@@ -22,7 +22,7 @@ export async function updateUserProfile(apiKey, username, data) {
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.detail || "Error al actualizar el perfil");
+    throw new Error(errorData.detail || "Could not update the profile");
   }
 
   return response.json();

@@ -51,7 +51,7 @@ export function UserAvatar({ user, variant = "comment", size = "md", className }
       <img
         className={imageClassName}
         src={avatarUrl}
-        alt={`Avatar de ${user.username ?? "usuari"}`}
+        alt={`${user.username ?? "user"}'s avatar`}
       />
     );
   }

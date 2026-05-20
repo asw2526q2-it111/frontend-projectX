@@ -5,7 +5,7 @@ export function UserSwitcher() {
 
   return (
     <label className="user-switcher">
-      <span>Usuari actiu</span>
+      <span>Active user</span>
       <select
         value={currentUser.username}
         onChange={(event) => setCurrentUsername(event.target.value)}
