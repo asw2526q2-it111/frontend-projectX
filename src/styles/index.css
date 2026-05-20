@@ -1972,6 +1972,7 @@ img.profile-avatar-large {
 
 .lookup-manage-page .settings-manage-cell--center {
   white-space: nowrap;
+  text-align: center;
 }
 
 .lookup-manage-page .settings-color-field {
@@ -2084,18 +2085,42 @@ img.profile-avatar-large {
   grid-template-columns: auto auto;
   align-items: center;
   min-height: 42px;
+  justify-content: flex-start;
 }
 
 .lookup-manage-page .settings-field--check input {
   accent-color: var(--primary);
 }
 
+.lookup-manage-page .settings-manage-cell .settings-field--check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+}
+
+.lookup-manage-page .settings-manage-cell .settings-field--check input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  min-height: 16px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #98a7b8;
+  border-radius: 4px;
+  background: #ffffff;
+  box-shadow: none;
+}
+
 .lookup-manage-page .settings-table-actions {
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.lookup-manage-page .settings-table-actions__inner {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: nowrap;
-  white-space: nowrap;
 }
 
 .lookup-manage-page .settings-table-actions .button {
