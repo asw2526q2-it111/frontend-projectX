@@ -435,8 +435,18 @@ export function SettingsPage() {
     if (!supportsReplacement) return;
 
     try {
-      const payload = await listIssues(currentUser.apiKey);
+      let payload;
+      // Try to ask the backend for only the issues that match this lookup to save bandwidth.
+      if (activeCatalogKey === "tags") {
+        payload = await listIssues(currentUser.apiKey, { tags: item.name });
+      } else if (ISSUE_LOOKUP_FIELDS[activeCatalogKey]) {
+        payload = await listIssues(currentUser.apiKey, { [ISSUE_LOOKUP_FIELDS[activeCatalogKey]]: item.name });
+      } else {
+        payload = await listIssues(currentUser.apiKey);
+      }
+
       const allIssues = getResults(payload);
+      // In case the backend doesn't support filtering, fall back to client-side check.
       const affectedIssues = allIssues.filter((issue) => isIssueAffected(issue, activeCatalogKey, item.name));
 
       setDeleteDialog((current) =>
