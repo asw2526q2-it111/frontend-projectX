@@ -94,7 +94,7 @@ const CATALOGS = {
 };
 
 const CATALOG_ORDER = Object.keys(CATALOGS);
-const REASSIGNABLE_CATALOGS = new Set(["statuses", "types", "priorities", "severities", "tags"]);
+const REASSIGNABLE_CATALOGS = new Set(["statuses", "types", "priorities", "severities"]);
 const ISSUE_LOOKUP_FIELDS = {
   statuses: "status",
   types: "type",
@@ -218,20 +218,6 @@ function buildIssueReplacementPayload(issue, catalogKey, originalName, replaceme
   return { [fieldNameMap[catalogKey] ?? catalogKey]: replacementName };
 }
 
-function getGridTemplate(catalog) {
-  return getRowFields(catalog)
-    .map((field) => {
-      if (field.name === "color") return "72px";
-      if (field.name === "name") return "minmax(150px, 180px)";
-      if (field.type === "number") return "88px";
-      if (field.type === "checkbox") return "112px";
-      if (field.type === "select") return "minmax(110px, 120px)";
-      return "minmax(120px, 1fr)";
-    })
-    .concat("120px")
-    .join(" ");
-}
-
 function getRowFields(catalog) {
   const colorField = catalog.fields.find((field) => field.name === "color");
   const restFields = catalog.fields.filter((field) => field.name !== "color");
@@ -284,6 +270,22 @@ function FieldControl({ field, value, onChange, compact = false }) {
     );
   }
 
+  if (field.type === "number") {
+    return (
+      <label className="settings-field">
+        {!compact ? <span>{field.label}</span> : null}
+        <input
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          value={value}
+          placeholder={field.placeholder}
+          onChange={(event) => onChange(event.target.value.replace(/\D+/g, ""))}
+        />
+      </label>
+    );
+  }
+
   return (
     <label className="settings-field">
       {!compact ? <span>{field.label}</span> : null}
@@ -297,37 +299,38 @@ function FieldControl({ field, value, onChange, compact = false }) {
   );
 }
 
-function SettingsRow({ catalog, item, draft, saving, onChange, onSave, onDelete, gridTemplateColumns }) {
+function SettingsRow({ catalog, item, draft, saving, onChange, onSave, onDelete }) {
   const rowFields = getRowFields(catalog);
+  const isDueDateCatalog = catalog.resource === "due-dates";
 
   return (
-    <div className="settings-table-row" style={{ gridTemplateColumns }}>
-      {rowFields.map((field, index) => (
-        <div
+    <tr className={`settings-manage-row${isDueDateCatalog ? " settings-manage-row--due-dates" : ""}`}>
+      {rowFields.map((field) => (
+        <td
           key={field.name}
-          className={`settings-table-cell${field.type === "checkbox" ? " settings-table-cell--center" : ""}${
-            field.name === "color" ? " settings-table-cell--color" : ""
-          }`}
+          className={`settings-manage-cell settings-manage-cell--${field.name}${
+            field.type === "checkbox" ? " settings-manage-cell--center" : ""
+          }${field.name === "color" ? " settings-manage-cell--color" : ""}`}
         >
           <FieldControl
             field={field}
             value={draft[field.name]}
             onChange={(nextValue) => onChange(item.name, field.name, nextValue)}
-            compact={index > 0}
+            compact
           />
-        </div>
+        </td>
       ))}
 
-      <div className="settings-table-cell settings-table-actions">
+      <td className="settings-manage-cell settings-table-actions">
         <button className="button button-primary" type="button" onClick={() => onSave(item.name)} disabled={saving}>
           Save
         </button>
-        <button className="button button-danger" type="button" onClick={() => onDelete(item.name)} disabled={saving}>
+        <button className="button button-danger" type="button" onClick={() => onDelete(item)} disabled={saving}>
           <Trash2 size={14} aria-hidden="true" />
           Delete
         </button>
-      </div>
-    </div>
+      </td>
+    </tr>
   );
 }
 
@@ -348,7 +351,6 @@ export function SettingsPage() {
     () => [...items].sort((left, right) => left.name.localeCompare(right.name)),
     [items]
   );
-  const rowGridTemplate = useMemo(() => getGridTemplate(activeCatalog), [activeCatalog]);
 
   useEffect(() => {
     let ignore = false;
@@ -418,62 +420,100 @@ export function SettingsPage() {
     setRowDrafts(Object.fromEntries(nextItems.map((item) => [item.name, itemToFormValues(activeCatalog, item)])));
   }
 
-  async function openDeleteDialog(item) {
-    const supportsReplacement = REASSIGNABLE_CATALOGS.has(activeCatalogKey);
-    const replacementOptions = activeItems.filter((option) => option.name !== item.name);
+  function closeDeleteDialog() {
+    setDeleteDialog(null);
+  }
 
+  async function buildReplacementDialog(item, message) {
     setDeleteDialog({
       item,
-      loading: supportsReplacement,
-      supportsReplacement,
-      replacementOptions,
-      replacement: replacementOptions[0]?.name ?? "",
+      loading: true,
+      replacementOptions: [],
+      replacement: "",
       affectedCount: 0,
       affectedIssues: [],
+      message,
     });
 
-    if (!supportsReplacement) return;
-
     try {
-      let payload;
-      // Try to ask the backend for only the issues that match this lookup to save bandwidth.
-      if (activeCatalogKey === "tags") {
-        payload = await listIssues(currentUser.apiKey, { tags: item.name });
-      } else if (ISSUE_LOOKUP_FIELDS[activeCatalogKey]) {
-        payload = await listIssues(currentUser.apiKey, { [ISSUE_LOOKUP_FIELDS[activeCatalogKey]]: item.name });
-      } else {
-        payload = await listIssues(currentUser.apiKey);
-      }
+      const [lookupPayload, issuesPayload] = await Promise.all([
+        listLookup(currentUser.apiKey, activeCatalog.resource),
+        ISSUE_LOOKUP_FIELDS[activeCatalogKey]
+          ? listIssues(currentUser.apiKey, { [ISSUE_LOOKUP_FIELDS[activeCatalogKey]]: item.name })
+          : listIssues(currentUser.apiKey),
+      ]);
 
-      const allIssues = getResults(payload);
-      // In case the backend doesn't support filtering, fall back to client-side check.
-      const affectedIssues = allIssues.filter((issue) => isIssueAffected(issue, activeCatalogKey, item.name));
+      const replacementOptions = getResults(lookupPayload).filter((option) => option.name !== item.name);
+      const affectedIssues = getResults(issuesPayload).filter((issue) =>
+        isIssueAffected(issue, activeCatalogKey, item.name)
+      );
 
       setDeleteDialog((current) =>
         current
           ? {
               ...current,
               loading: false,
+              replacementOptions,
+              replacement: replacementOptions[0]?.name ?? "",
               affectedCount: affectedIssues.length,
               affectedIssues,
             }
           : current
       );
-    } catch (error) {
-      setDeleteDialog(null);
-      setErrorMessage(getErrorMessage(error, `Unable to inspect issues that use ${item.name}.`));
+    } catch (inspectError) {
+      setDeleteDialog((current) =>
+        current
+          ? {
+              ...current,
+              loading: false,
+              message: getErrorMessage(
+                inspectError,
+                `Unable to load replacement ${activeCatalog.label.toLowerCase()} for ${item.name}.`
+              ),
+            }
+          : current
+      );
     }
   }
 
-  function closeDeleteDialog() {
-    setDeleteDialog(null);
+  async function handleDelete(item) {
+    setSavingRowName(item.name);
+    setErrorMessage("");
+
+    try {
+      await deleteLookup(currentUser.apiKey, activeCatalog.resource, item.name);
+      await refreshCatalog();
+      closeDeleteDialog();
+    } catch (error) {
+      if (error?.status === 409) {
+        setErrorMessage(
+          `Unable to delete ${item.name}. It is the last ${activeCatalog.singular}, so it must remain available.`
+        );
+        return;
+      }
+
+      if (!REASSIGNABLE_CATALOGS.has(activeCatalogKey)) {
+        setErrorMessage(getErrorMessage(error, `Unable to delete ${activeCatalog.singular}.`));
+        return;
+      }
+
+      await buildReplacementDialog(
+        item,
+        getErrorMessage(
+          error,
+          `Choose a replacement ${activeCatalog.singular} before deleting ${item.name}.`
+        )
+      );
+    } finally {
+      setSavingRowName("");
+    }
   }
 
   async function confirmDelete() {
     if (!deleteDialog) return;
 
-    const { item, supportsReplacement, affectedIssues, replacement } = deleteDialog;
-    if (supportsReplacement && affectedIssues.length > 0 && !replacement) {
+    const { item, affectedIssues, replacement } = deleteDialog;
+    if (!replacement) {
       setErrorMessage("Please choose a replacement.");
       return;
     }
@@ -482,7 +522,7 @@ export function SettingsPage() {
     setErrorMessage("");
 
     try {
-      if (supportsReplacement && affectedIssues.length > 0) {
+      if (affectedIssues.length > 0) {
         const replacementPayloads = affectedIssues.map((issue) =>
           updateIssue(currentUser.apiKey, issue.id, buildIssueReplacementPayload(issue, activeCatalogKey, item.name, replacement))
         );
@@ -493,6 +533,14 @@ export function SettingsPage() {
       await refreshCatalog();
       closeDeleteDialog();
     } catch (error) {
+      if (error?.status === 409) {
+        closeDeleteDialog();
+        setErrorMessage(
+          `Unable to delete ${item.name}. It is the last ${activeCatalog.singular}, so it must remain available.`
+        );
+        return;
+      }
+
       setErrorMessage(getErrorMessage(error, `Unable to delete ${activeCatalog.singular}.`));
     } finally {
       setSavingRowName("");
@@ -544,21 +592,26 @@ export function SettingsPage() {
   }
 
   return (
-    <section className="page-stack settings-page settings-workspace issue-workspace">
-      <header className="topbar custom-topbar issue-topbar">
-        <AppBrand className="issue-workspace-brand" subtitle="Focus mode for bug tracking and triage" />
+    <section className="page-stack settings-page settings-workspace issue-workspace lookup-manage-page">
+      <div className="app-bg-shape app-bg-shape-left" aria-hidden="true" />
+      <div className="app-bg-shape app-bg-shape-right" aria-hidden="true" />
 
-        <div className="topbar-search" aria-hidden="true" />
+      <header className="topbar custom-topbar issue-topbar settings-topbar">
+        <AppBrand className="issue-workspace-brand" subtitle="Configuration Hub" />
 
-        <Link className="button settings-back-button" to="/issues">
-          <ArrowLeft size={16} aria-hidden="true" />
-          Back to issues
-        </Link>
+        <div className="topbar-search settings-topbar-spacer" aria-hidden="true" />
+
+        <div className="topbar-profile settings-topbar-profile">
+          <Link className="button settings-back-button" to="/issues">
+            <ArrowLeft size={16} aria-hidden="true" />
+            Back to issues
+          </Link>
+        </div>
       </header>
 
-      <main className="settings-shell">
-        <aside className="panel settings-sidebar">
-          <div className="settings-sidebar__title">
+      <main className="settings-layout">
+        <aside className="panel settings-sidebar settings-sidebar-panel">
+          <div className="settings-sidebar__title settings-menu-title">
             <Settings2 size={17} aria-hidden="true" />
             Settings Menu
           </div>
@@ -580,7 +633,7 @@ export function SettingsPage() {
           </div>
         </aside>
 
-        <section className="settings-main">
+        <div className="settings-content">
           <section className="panel settings-create-card">
             <h2>Add new {activeCatalog.singular}</h2>
 
@@ -607,37 +660,38 @@ export function SettingsPage() {
           </section>
 
           <section className="panel settings-table-card">
-            <h2>Existing edit {activeCatalog.label.toLowerCase()}</h2>
+            <h2>Existing {activeCatalog.label.toLowerCase()}</h2>
 
             {loading ? <LoadingState /> : null}
 
             {!loading && activeItems.length > 0 ? (
-              <div className="settings-table">
-                <div
-                  className="settings-table-row settings-table-row--header"
-                  style={{ gridTemplateColumns: rowGridTemplate }}
-                >
-                  {getRowFields(activeCatalog).map((field) => (
-                    <div key={field.name} className="settings-table-head">
-                      {field.label}
-                    </div>
-                  ))}
-                  <div className="settings-table-head">Actions</div>
-                </div>
-
-                {activeItems.map((item) => (
-                  <SettingsRow
-                    key={item.name}
-                    catalog={activeCatalog}
-                    item={item}
-                    draft={rowDrafts[item.name] ?? itemToFormValues(activeCatalog, item)}
-                    saving={savingRowName === item.name}
-                    onChange={handleRowFieldChange}
-                    onSave={handleSave}
-                    onDelete={openDeleteDialog}
-                    gridTemplateColumns={rowGridTemplate}
-                  />
-                ))}
+              <div className="settings-table-wrap">
+                <table className="settings-manage-table">
+                  <thead>
+                    <tr>
+                      {getRowFields(activeCatalog).map((field) => (
+                        <th key={field.name} className={field.name === "color" ? "settings-manage-head settings-manage-head--color" : "settings-manage-head"}>
+                          {field.label}
+                        </th>
+                      ))}
+                      <th className="settings-manage-head settings-manage-head--actions">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activeItems.map((item) => (
+                      <SettingsRow
+                        key={item.name}
+                        catalog={activeCatalog}
+                        item={item}
+                        draft={rowDrafts[item.name] ?? itemToFormValues(activeCatalog, item)}
+                        saving={savingRowName === item.name}
+                        onChange={handleRowFieldChange}
+                        onSave={handleSave}
+                        onDelete={handleDelete}
+                      />
+                    ))}
+                  </tbody>
+                </table>
               </div>
             ) : null}
 
@@ -648,7 +702,7 @@ export function SettingsPage() {
               />
             ) : null}
           </section>
-        </section>
+        </div>
       </main>
 
       {deleteDialog ? (
@@ -659,45 +713,35 @@ export function SettingsPage() {
                 <span className="eyebrow">Delete {activeCatalog.singular}</span>
                 <h3>Delete {deleteDialog.item.name}</h3>
                 <p>
-                  {deleteDialog.loading
-                    ? "Checking issues that use this value..."
-                    : deleteDialog.affectedCount > 0
-                      ? `${deleteDialog.affectedCount} issue${deleteDialog.affectedCount === 1 ? "" : "s"} will be reassigned first.`
-                      : "No issues currently use this value."}
+                  {deleteDialog.loading ? "Loading replacement options..." : deleteDialog.message}
                 </p>
               </div>
             </div>
 
-            {deleteDialog.supportsReplacement ? (
-              deleteDialog.loading ? (
-                <LoadingState />
-              ) : deleteDialog.affectedCount > 0 ? (
-                deleteDialog.replacementOptions.length > 0 ? (
-                  <label className="settings-delete-field">
-                    <span>Replacement</span>
-                    <select
-                      value={deleteDialog.replacement}
-                      onChange={(event) =>
-                        setDeleteDialog((current) => (current ? { ...current, replacement: event.target.value } : current))
-                      }
-                    >
-                      <option value="">Select replacement</option>
-                      {deleteDialog.replacementOptions.map((option) => (
-                        <option key={option.name} value={option.name}>
-                          {option.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                ) : (
-                  <p className="settings-delete-note">No replacement values are available, so this value cannot be deleted while issues still use it.</p>
-                )
-              ) : (
-                <p className="settings-delete-note">You can delete this value directly because no issues use it.</p>
-              )
-            ) : (
-              <p className="settings-delete-note">This catalog can be deleted directly.</p>
-            )}
+            {deleteDialog.loading ? <LoadingState /> : null}
+
+            {!deleteDialog.loading && deleteDialog.replacementOptions.length > 0 ? (
+              <label className="settings-delete-field">
+                <span>Replacement</span>
+                <select
+                  value={deleteDialog.replacement}
+                  onChange={(event) =>
+                    setDeleteDialog((current) => (current ? { ...current, replacement: event.target.value } : current))
+                  }
+                >
+                  <option value="">Select replacement</option>
+                  {deleteDialog.replacementOptions.map((option) => (
+                    <option key={option.name} value={option.name}>
+                      {option.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+
+            {!deleteDialog.loading && deleteDialog.replacementOptions.length === 0 ? (
+              <p className="settings-delete-note">No replacement values are available for this catalog.</p>
+            ) : null}
 
             <div className="settings-delete-actions">
               <button className="button" type="button" onClick={closeDeleteDialog} disabled={savingRowName === deleteDialog.item.name}>
@@ -707,9 +751,14 @@ export function SettingsPage() {
                 className="button button-danger"
                 type="button"
                 onClick={confirmDelete}
-                disabled={savingRowName === deleteDialog.item.name || (deleteDialog.supportsReplacement && deleteDialog.affectedCount > 0 && !deleteDialog.replacement)}
+                disabled={
+                  deleteDialog.loading ||
+                  savingRowName === deleteDialog.item.name ||
+                  !deleteDialog.replacementOptions.length ||
+                  !deleteDialog.replacement
+                }
               >
-                {savingRowName === deleteDialog.item.name ? "Deleting..." : "Delete"}
+                {savingRowName === deleteDialog.item.name ? "Deleting..." : "Delete with replacement"}
               </button>
             </div>
           </div>
