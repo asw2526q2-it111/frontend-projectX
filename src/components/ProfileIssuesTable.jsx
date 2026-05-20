@@ -1,112 +1,216 @@
-import { useState, useEffect } from "react";
+import { Clock3, TriangleAlert } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { getUserIssues } from "../api/users";
 import { useCurrentUser } from "../context/currentUser";
+import { useAsync } from "../hooks/useAsync";
+import { formatDate } from "../utils/format";
+import { normalizePagedList } from "../utils/apiList";
+import { getUserAvatarUrl, getUserInitials } from "../utils/user";
+import { EmptyState } from "./EmptyState";
+import { LoadingState } from "./LoadingState";
 
-export function ProfileIssuesTable({ username, type }) {
+const PROFILE_TABLE_SORTS = [
+  { value: "type", label: "Type", centered: true },
+  { value: "severity", label: "Severity", centered: true },
+  { value: "priority", label: "Priority", centered: true },
+  { value: "issue", label: "Issue" },
+  { value: "status", label: "Status" },
+  { value: "updated", label: "Modified" },
+  { value: "assignee", label: "Assignee", centered: true, sortable: false },
+];
+
+export function ProfileIssuesTable({ username, type, profileUser }) {
   const { currentUser } = useCurrentUser();
-  const [issues, setIssues] = useState([]);
-  const [loading, setLoading] = useState(true);
-  
-  
-  const [sort, setSort] = useState("updated"); 
-  const [dir, setDir] = useState("desc");      
+  const [sortBy, setSortBy] = useState("updated");
+  const [sortDirection, setSortDirection] = useState("desc");
 
-  useEffect(() => {
-    
-    const fetchIssues = async () => {
-      setLoading(true);
-      try {
-        
-        const url = `${import.meta.env.VITE_API_BASE_URL}/api/users/${username}/${type}/?sort=${sort}&dir=${dir}`;
-        
-        const response = await fetch(url, {
-          headers: {
-            "X-API-Key": currentUser?.apiKey,
-            "Content-Type": "application/json"
-          }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          
-          setIssues(data.results || data); 
-        } else {
-          console.error("Error carregant les incidències", response.status);
-        }
-      } catch (error) {
-        console.error("Error de xarxa:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const issuesState = useAsync(
+    () =>
+      getUserIssues(currentUser?.apiKey, username, type, {
+        sort_by: sortBy,
+        sort_direction: sortDirection,
+      }),
+    [currentUser?.apiKey, username, type, sortBy, sortDirection]
+  );
 
-    fetchIssues();
-  }, [username, type, sort, dir, currentUser?.apiKey]);
+  const issues = useMemo(() => normalizePagedList(issuesState.data), [issuesState.data]);
 
-  
-  const handleSort = (columnName) => {
-    if (sort === columnName) {
-      
-      setDir(dir === "asc" ? "desc" : "asc");
-    } else {
-      
-      setSort(columnName);
-      setDir("asc");
+  function handleSortChange(value, sortable = true) {
+    if (!sortable) return;
+
+    if (value === sortBy) {
+      setSortDirection((current) => (current === "desc" ? "asc" : "desc"));
+      return;
     }
-  };
 
-  
-  const renderSortIndicator = (columnName) => {
-    if (sort !== columnName) return <span style={{ opacity: 0.2, marginLeft: '5px' }}>↕</span>;
-    return dir === "asc" ? <span style={{ marginLeft: '5px' }}>↑</span> : <span style={{ marginLeft: '5px' }}>↓</span>;
-  };
+    setSortBy(value);
+    setSortDirection("desc");
+  }
 
-  if (loading) return <div style={{ padding: "2rem", textAlign: "center" }}>Carregant incidències...</div>;
+  if (issuesState.loading) {
+    return <LoadingState />;
+  }
 
-  if (issues.length === 0) return <div className="profile-empty" style={{ padding: "2rem", textAlign: "center", color: "#617487" }}>No s'han trobat incidències.</div>;
+  if (issuesState.error) {
+    return (
+      <EmptyState
+        title="No s'han pogut carregar les incidencies"
+        description={issuesState.error.message}
+      />
+    );
+  }
+
+  if (issues.length === 0) {
+    return (
+      <EmptyState
+        title="No s'han trobat incidencies"
+        description="Aquest usuari no te issues en aquesta pestanya."
+      />
+    );
+  }
 
   return (
-    <div className="issues-table">
-      {/* CAPÇALERA ORDENABLE */}
-      <div className="issues-table-header" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', padding: '1rem', borderBottom: '2px solid #dde6ee', fontWeight: 'bold', color: '#617487' }}>
-        <div style={{ cursor: "pointer" }} onClick={() => handleSort("title")}>
-          Issue {renderSortIndicator("title")}
-        </div>
-        <div style={{ cursor: "pointer" }} onClick={() => handleSort("status")}>
-          Status {renderSortIndicator("status")}
-        </div>
-        <div style={{ cursor: "pointer" }} onClick={() => handleSort("updated")}>
-          Modified {renderSortIndicator("updated")}
-        </div>
-        <div style={{ cursor: "pointer" }} onClick={() => handleSort("assignee")}>
-          Assignee {renderSortIndicator("assignee")}
-        </div>
-      </div>
+    <div className="issues-table-wrap">
+      <div className="issues-table">
+        <div className="issues-table-row issues-table-row--header">
+          {PROFILE_TABLE_SORTS.map((column) => {
+            const sortable = column.sortable !== false;
+            const className = `issues-table-head${
+              sortBy === column.value && sortable ? " active" : ""
+            }${column.centered ? " issues-table-head--center" : ""}`;
 
-      {/* LLISTA D'INCIDÈNCIES */}
-      <div>
-        {issues.map(issue => (
-          <div key={issue.id} className="issues-table-row" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', padding: '1rem', borderBottom: '1px solid #dde6ee', alignItems: 'center' }}>
-            <div className="issues-table-cell--title">
-              <Link to={`/issues/${issue.id}`} style={{ textDecoration: 'none', color: '#1f2d3d', fontWeight: '600' }}>
-                <span style={{ color: '#617487', marginRight: '8px' }}>#{issue.id}</span>
-                {issue.title}
-              </Link>
-            </div>
-            <div className="issues-table-cell--status">
-              <span style={{ background: '#f1f5f9', padding: '4px 8px', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 'bold' }}>
-                {issue.status?.name || issue.status || '-'}
-              </span>
-            </div>
-            <div className="issues-table-cell--modified" style={{ color: '#617487', fontSize: '0.9rem' }}>
-              {new Date(issue.updated_at || issue.created_at).toLocaleDateString()}
-            </div>
-            <div className="issues-table-cell--assignee">
-              {issue.assignee?.username || issue.assigned_to || '-'}
-            </div>
-          </div>
+            if (!sortable) {
+              return (
+                <div key={column.value} className={className} aria-hidden="true">
+                  {column.label}
+                </div>
+              );
+            }
+
+            return (
+              <button
+                key={column.value}
+                className={className}
+                type="button"
+                onClick={() => handleSortChange(column.value, sortable)}
+              >
+                {column.label}
+                {sortBy === column.value ? (
+                  <span className="issues-table-sort" aria-hidden="true">
+                    {sortDirection === "asc" ? "\u25B2" : "\u25BC"}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+
+        {issues.map((issue) => (
+          <ProfileIssueTableRow
+            key={issue.id}
+            issue={issue}
+            type={type}
+            profileUser={profileUser}
+          />
         ))}
       </div>
     </div>
   );
+}
+
+function ProfileIssueTableRow({ issue, type, profileUser }) {
+  const assigneeUser = type === "assigned" ? profileUser ?? issue.assignee : issue.assignee;
+
+  return (
+    <div className="issues-table-row">
+      <div className="issues-table-cell issues-table-cell--dot">
+        <ColorDot item={issue.type} titlePrefix="Type" />
+      </div>
+      <div className="issues-table-cell issues-table-cell--dot">
+        <ColorDot item={issue.severity} titlePrefix="Severity" />
+      </div>
+      <div className="issues-table-cell issues-table-cell--dot">
+        <ColorDot item={issue.priority} titlePrefix="Priority" />
+      </div>
+      <div className="issues-table-cell issues-table-cell--issue">
+        <Link className="issue-table-link" to={`/issues/${issue.id}`}>
+          <span className="issue-table-id">#{issue.id}</span>
+          <span className="issue-table-title">{issue.title}</span>
+        </Link>
+        <span className="issue-table-icons">
+          {issue.deadline ? (
+            <Clock3
+              className="issue-deadline-icon"
+              size={16}
+              color={deadlineColor(issue.deadline)}
+              aria-label={`Deadline: ${formatDate(issue.deadline)}`}
+            />
+          ) : null}
+        </span>
+      </div>
+      <div className="issues-table-cell issues-table-cell--status">
+        {issue.status ? (
+          <span className="issue-table-status" style={{ color: issue.status.color }}>
+            {issue.status.name}
+          </span>
+        ) : (
+          <span className="issue-table-status issue-table-status--empty">-</span>
+        )}
+      </div>
+      <div className="issues-table-cell issues-table-cell--modified">
+        {formatDate(issue.updated_at)}
+      </div>
+      <div className="issues-table-cell issues-table-cell--assignee">
+        <AssigneeAvatar user={assigneeUser} />
+      </div>
+    </div>
+  );
+}
+
+function AssigneeAvatar({ user }) {
+  if (!user?.username) {
+    return (
+      <span className="issue-assignee-avatar issue-assignee-avatar--empty" title="Unassigned">
+        <TriangleAlert size={14} aria-hidden="true" />
+      </span>
+    );
+  }
+
+  const avatarUrl = getUserAvatarUrl(user);
+  const initials = getUserInitials(user);
+
+  return (
+    <Link className="issue-assignee-link" to={`/profile/${user.username}`} title={`@${user.username}`}>
+      {avatarUrl ? (
+        <img className="issue-assignee-avatar" src={avatarUrl} alt={`Avatar de ${user.username}`} />
+      ) : (
+        <span className="issue-assignee-avatar issue-assignee-avatar--initials">{initials}</span>
+      )}
+    </Link>
+  );
+}
+
+function ColorDot({ item, titlePrefix }) {
+  if (!item?.color) {
+    return <span className="issue-list-dot issue-list-dot--empty" title={`${titlePrefix}: -`} />;
+  }
+
+  return (
+    <span
+      className="issue-list-dot"
+      style={{ background: item.color }}
+      title={`${titlePrefix}: ${item.name}`}
+    />
+  );
+}
+
+function deadlineColor(deadline) {
+  const remaining = new Date(deadline).getTime() - Date.now();
+  const day = 24 * 60 * 60 * 1000;
+
+  if (remaining <= 0) return "#dc2626";
+  if (remaining <= 3 * day) return "#f97316";
+  if (remaining <= 7 * day) return "#f59e0b";
+  return "#0f766e";
 }
