@@ -74,19 +74,27 @@
   padding: 0.6rem 0.85rem;
   border: 0;
   border-radius: 0.7rem;
+  color: #ffffff;
+  background: linear-gradient(120deg, var(--accent), var(--accent-dark));
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
+  transition:
+    background 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .issue-create-page .btn-secondary {
-  border: 1px solid var(--line);
-  color: var(--text-main);
-  background: transparent;
+  color: #ffffff;
+  background: linear-gradient(120deg, var(--accent), var(--accent-dark));
 }
 
+.issue-create-page .btn:hover,
 .issue-create-page .btn-secondary:hover {
-  background: var(--bg-main);
+  background: linear-gradient(120deg, #1199ba, #0b7089);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(13, 138, 168, 0.18);
 }
 
 .issue-create-page .create-page-header {
