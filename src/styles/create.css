@@ -440,6 +440,71 @@
   gap: 8px;
 }
 
+.issue-create-page .create-people-dropdown {
+  border: 1px solid var(--line);
+  border-radius: 0.95rem;
+  background: #ffffff;
+}
+
+.issue-create-page .create-people-dropdown summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 0.75rem 0.9rem;
+  font-size: 0.93rem;
+  color: var(--create-text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.issue-create-page .create-people-dropdown summary::-webkit-details-marker {
+  display: none;
+}
+
+.issue-create-page .create-people-dropdown summary::after {
+  content: "\25BE";
+  font-size: 0.72rem;
+  color: var(--create-soft);
+}
+
+.issue-create-page .create-people-dropdown[open] summary::after {
+  content: "\25B4";
+}
+
+.issue-create-page .create-people-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0 0.9rem 0.9rem;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.issue-create-page .create-people-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: 0.8rem;
+  cursor: pointer;
+  transition: background-color 0.18s ease, border-color 0.18s ease;
+}
+
+.issue-create-page .create-people-option:hover {
+  background: #f3fbfd;
+}
+
+.issue-create-page .create-people-option.is-selected {
+  border-color: #b7dce7;
+  background: #eef7fa;
+}
+
+.issue-create-page .create-people-option input {
+  margin: 0;
+  accent-color: var(--create-accent);
+}
+
 .issue-create-page .create-person-card {
   display: flex;
   align-items: center;

@@ -1,6 +1,6 @@
 import { ChevronDown, Plus, UserCheck, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { createIssue } from "../api/issues";
 import { createLookup, listLookup } from "../api/lookups";
 import { listUsers } from "../api/users";
@@ -116,15 +116,15 @@ function mapUsernamesToUsers(usernames, users, currentUser) {
     });
 }
 
-function UserAvatar({ user, size = "small" }) {
-  const className = `issue-user-avatar${size === "small" ? " issue-user-avatar--small" : ""}`;
+function UserAvatar({ user, size = "sm" }) {
+  const className = `create-user-avatar create-user-avatar--${size}`;
 
   if (user?.avatar_url) {
     return <img className={className} src={user.avatar_url} alt={`${user.username}'s avatar`} />;
   }
 
   return (
-    <span className={`${className} issue-user-avatar--initials`} aria-hidden="true">
+    <span className={`${className} create-user-avatar--initials`} aria-hidden="true">
       {getUserInitials(user)}
     </span>
   );
@@ -262,44 +262,55 @@ function AssigneeSection({ users, selectedUsername, currentUser, onChange }) {
           onClick={() => onChange(isAssignedToCurrentUser ? "" : currentDraftUser.username)}
         >
           <UserCheck size={15} aria-hidden="true" />
-          {isAssignedToCurrentUser ? "Unassign" : "Assign me"}
+          {isAssignedToCurrentUser ? "Unassign" : "Assign to me"}
         </button>
       </div>
 
       {selectedUser ? (
-        <div className="issue-person-list">
-          <Link
-            className="issue-person-item issue-person-link"
-            to={`/profile/${selectedUser.username}`}
-            title={`View ${selectedUser.username} profile`}
-          >
-            <UserAvatar user={selectedUser} />
-            <span className="issue-person-name">{selectedUser.username}</span>
-          </Link>
+        <div className="create-person-list">
+          <div className="create-person-card">
+            <UserAvatar user={selectedUser} size="sm" />
+            <div>
+              <strong>{getUserDisplayName(selectedUser)}</strong>
+              <span>@{selectedUser.username}</span>
+            </div>
+          </div>
         </div>
       ) : (
-        <div className="issue-person-empty">No one is assigned yet.</div>
+        <p className="create-empty-text">No one is assigned yet.</p>
       )}
 
-      <details className="watchers-dropdown" open={Boolean(selectedUsername)}>
+      <details className="create-people-dropdown" open={Boolean(selectedUsername)}>
         <summary id="id_assignees">Select assignee</summary>
-        <div className="watchers-list">
-          <label className="watchers-item">
+        <div className="create-people-options">
+          <label className={`create-people-option${!selectedUsername ? " is-selected" : ""}`}>
             <input type="radio" name="assignee" value="" checked={!selectedUsername} onChange={() => onChange("")} />
-            <span>Unassigned</span>
+            <span className="create-user-avatar create-user-avatar--sm create-user-avatar--empty">-</span>
+            <span className="create-user-copy">
+              <strong>Unassigned</strong>
+              <small>No assignee</small>
+            </span>
           </label>
-          {users.map((user) => (
-            <label className="watchers-item" key={user.username}>
-              <input
-                type="radio"
-                name="assignee"
-                value={user.username}
-                checked={selectedUsername === user.username}
-                onChange={() => onChange(user.username)}
-              />
-              <span>{user.username}</span>
-            </label>
-          ))}
+          {users.map((user) => {
+            const isSelected = selectedUsername === user.username;
+
+            return (
+              <label className={`create-people-option${isSelected ? " is-selected" : ""}`} key={user.username}>
+                <input
+                  type="radio"
+                  name="assignee"
+                  value={user.username}
+                  checked={isSelected}
+                  onChange={() => onChange(user.username)}
+                />
+                <UserAvatar user={user} size="sm" />
+                <span className="create-user-copy">
+                  <strong>{getUserDisplayName(user)}</strong>
+                  <small>@{user.username}</small>
+                </span>
+              </label>
+            );
+          })}
         </div>
       </details>
     </section>
@@ -342,32 +353,35 @@ function WatchersSection({ users, selectedUsernames, currentUser, onChange }) {
       </div>
 
       {selectedUsers.length > 0 ? (
-        <div className="issue-person-list">
+        <div className="create-person-list">
           {selectedUsers.map((watcher) => (
-            <Link
-              className="issue-person-item issue-person-link"
-              key={watcher.username}
-              to={`/profile/${watcher.username}`}
-              title={`View ${watcher.username} profile`}
-            >
-              <UserAvatar user={watcher} />
-              <span className="issue-person-name">{watcher.username}</span>
-            </Link>
+            <div className="create-person-card" key={watcher.username}>
+              <UserAvatar user={watcher} size="sm" />
+              <div>
+                <strong>{getUserDisplayName(watcher)}</strong>
+                <span>@{watcher.username}</span>
+              </div>
+            </div>
           ))}
         </div>
       ) : (
-        <div className="issue-person-empty">No watchers yet.</div>
+        <p className="create-empty-text">No watchers yet.</p>
       )}
 
-      <details className="watchers-dropdown" open={selectedUsernames.length > 0}>
+      <details className="create-people-dropdown" open={selectedUsernames.length > 0}>
         <summary id="id_watchers">
           Select watchers
           {selectedUsernames.length ? ` (${selectedUsernames.length})` : ""}
         </summary>
-        <div className="watchers-list">
+        <div className="create-people-options">
           {users.length > 0 ? (
             users.map((user) => (
-              <label className="watchers-item" key={user.username}>
+              <label
+                className={`create-people-option${
+                  selectedSet.has(normalizeIdentity(user.username)) ? " is-selected" : ""
+                }`}
+                key={user.username}
+              >
                 <input
                   type="checkbox"
                   name="watchers"
@@ -375,11 +389,15 @@ function WatchersSection({ users, selectedUsernames, currentUser, onChange }) {
                   checked={selectedSet.has(normalizeIdentity(user.username))}
                   onChange={() => toggleWatcher(user.username)}
                 />
-                <span>{user.username}</span>
+                <UserAvatar user={user} size="sm" />
+                <span className="create-user-copy">
+                  <strong>{getUserDisplayName(user)}</strong>
+                  <small>@{user.username}</small>
+                </span>
               </label>
             ))
           ) : (
-            <span className="assign-hint">No users available</span>
+            <span className="create-picker-empty">No users available</span>
           )}
         </div>
       </details>
