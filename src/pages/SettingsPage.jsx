@@ -424,45 +424,15 @@ export function SettingsPage() {
 
     setDeleteDialog({
       item,
-      loading: supportsReplacement,
+      loading: false,
       supportsReplacement,
       replacementOptions,
       replacement: replacementOptions[0]?.name ?? "",
       affectedCount: 0,
       affectedIssues: [],
+      needsReplacement: false,
+      message: "",
     });
-
-    if (!supportsReplacement) return;
-
-    try {
-      let payload;
-      // Try to ask the backend for only the issues that match this lookup to save bandwidth.
-      if (activeCatalogKey === "tags") {
-        payload = await listIssues(currentUser.apiKey, { tags: item.name });
-      } else if (ISSUE_LOOKUP_FIELDS[activeCatalogKey]) {
-        payload = await listIssues(currentUser.apiKey, { [ISSUE_LOOKUP_FIELDS[activeCatalogKey]]: item.name });
-      } else {
-        payload = await listIssues(currentUser.apiKey);
-      }
-
-      const allIssues = getResults(payload);
-      // In case the backend doesn't support filtering, fall back to client-side check.
-      const affectedIssues = allIssues.filter((issue) => isIssueAffected(issue, activeCatalogKey, item.name));
-
-      setDeleteDialog((current) =>
-        current
-          ? {
-              ...current,
-              loading: false,
-              affectedCount: affectedIssues.length,
-              affectedIssues,
-            }
-          : current
-      );
-    } catch (error) {
-      setDeleteDialog(null);
-      setErrorMessage(getErrorMessage(error, `Unable to inspect issues that use ${item.name}.`));
-    }
   }
 
   function closeDeleteDialog() {
@@ -472,8 +442,8 @@ export function SettingsPage() {
   async function confirmDelete() {
     if (!deleteDialog) return;
 
-    const { item, supportsReplacement, affectedIssues, replacement } = deleteDialog;
-    if (supportsReplacement && affectedIssues.length > 0 && !replacement) {
+    const { item, supportsReplacement, affectedIssues, replacement, needsReplacement } = deleteDialog;
+    if (supportsReplacement && needsReplacement && affectedIssues.length > 0 && !replacement) {
       setErrorMessage("Please choose a replacement.");
       return;
     }
@@ -482,7 +452,7 @@ export function SettingsPage() {
     setErrorMessage("");
 
     try {
-      if (supportsReplacement && affectedIssues.length > 0) {
+      if (supportsReplacement && needsReplacement && affectedIssues.length > 0) {
         const replacementPayloads = affectedIssues.map((issue) =>
           updateIssue(currentUser.apiKey, issue.id, buildIssueReplacementPayload(issue, activeCatalogKey, item.name, replacement))
         );
@@ -493,7 +463,66 @@ export function SettingsPage() {
       await refreshCatalog();
       closeDeleteDialog();
     } catch (error) {
-      setErrorMessage(getErrorMessage(error, `Unable to delete ${activeCatalog.singular}.`));
+      if (!supportsReplacement) {
+        setErrorMessage(getErrorMessage(error, `Unable to delete ${activeCatalog.singular}.`));
+        return;
+      }
+
+      const fallbackMessage = getErrorMessage(
+        error,
+        `Unable to delete ${activeCatalog.singular} right now. Choose a replacement and try again.`
+      );
+
+      setDeleteDialog((current) =>
+        current
+          ? {
+              ...current,
+              loading: true,
+              needsReplacement: true,
+              message: fallbackMessage,
+            }
+          : current
+      );
+
+      try {
+        let payload;
+        if (activeCatalogKey === "tags") {
+          payload = await listIssues(currentUser.apiKey, { tags: item.name });
+        } else if (ISSUE_LOOKUP_FIELDS[activeCatalogKey]) {
+          payload = await listIssues(currentUser.apiKey, { [ISSUE_LOOKUP_FIELDS[activeCatalogKey]]: item.name });
+        } else {
+          payload = await listIssues(currentUser.apiKey);
+        }
+
+        const allIssues = getResults(payload);
+        const affectedIssues = allIssues.filter((issue) => isIssueAffected(issue, activeCatalogKey, item.name));
+
+        setDeleteDialog((current) =>
+          current
+            ? {
+                ...current,
+                loading: false,
+                affectedCount: affectedIssues.length,
+                affectedIssues,
+                replacement: current.replacement || current.replacementOptions[0]?.name || "",
+                message:
+                  affectedIssues.length > 0
+                    ? fallbackMessage
+                    : `No issues currently use ${item.name}, so the delete may have failed for another reason.`,
+              }
+            : current
+        );
+      } catch (inspectError) {
+        setDeleteDialog((current) =>
+          current
+            ? {
+                ...current,
+                loading: false,
+                message: getErrorMessage(inspectError, `Unable to inspect issues that use ${item.name}.`),
+              }
+            : current
+        );
+      }
     } finally {
       setSavingRowName("");
     }
@@ -659,11 +688,15 @@ export function SettingsPage() {
                 <span className="eyebrow">Delete {activeCatalog.singular}</span>
                 <h3>Delete {deleteDialog.item.name}</h3>
                 <p>
-                  {deleteDialog.loading
-                    ? "Checking issues that use this value..."
-                    : deleteDialog.affectedCount > 0
-                      ? `${deleteDialog.affectedCount} issue${deleteDialog.affectedCount === 1 ? "" : "s"} will be reassigned first.`
-                      : "No issues currently use this value."}
+                  {deleteDialog.message
+                    ? deleteDialog.message
+                    : deleteDialog.loading
+                      ? "Checking issues that use this value..."
+                      : deleteDialog.needsReplacement
+                        ? deleteDialog.affectedCount > 0
+                          ? `${deleteDialog.affectedCount} issue${deleteDialog.affectedCount === 1 ? "" : "s"} need a replacement before the value can be removed.`
+                          : "No issues currently use this value."
+                        : "Try deleting this value first. If the backend blocks it, you can pick a replacement and retry."}
                 </p>
               </div>
             </div>
@@ -671,7 +704,7 @@ export function SettingsPage() {
             {deleteDialog.supportsReplacement ? (
               deleteDialog.loading ? (
                 <LoadingState />
-              ) : deleteDialog.affectedCount > 0 ? (
+              ) : deleteDialog.needsReplacement && deleteDialog.affectedCount > 0 ? (
                 deleteDialog.replacementOptions.length > 0 ? (
                   <label className="settings-delete-field">
                     <span>Replacement</span>
@@ -692,8 +725,10 @@ export function SettingsPage() {
                 ) : (
                   <p className="settings-delete-note">No replacement values are available, so this value cannot be deleted while issues still use it.</p>
                 )
+              ) : deleteDialog.needsReplacement ? (
+                <p className="settings-delete-note">No issues currently use this value, so the backend error likely comes from another constraint.</p>
               ) : (
-                <p className="settings-delete-note">You can delete this value directly because no issues use it.</p>
+                <p className="settings-delete-note">The delete request will go to the backend first. If it fails because issues still reference this value, you can remap them here.</p>
               )
             ) : (
               <p className="settings-delete-note">This catalog can be deleted directly.</p>
@@ -707,9 +742,16 @@ export function SettingsPage() {
                 className="button button-danger"
                 type="button"
                 onClick={confirmDelete}
-                disabled={savingRowName === deleteDialog.item.name || (deleteDialog.supportsReplacement && deleteDialog.affectedCount > 0 && !deleteDialog.replacement)}
+                disabled={
+                  savingRowName === deleteDialog.item.name ||
+                  (deleteDialog.supportsReplacement && deleteDialog.needsReplacement && deleteDialog.affectedCount > 0 && !deleteDialog.replacement)
+                }
               >
-                {savingRowName === deleteDialog.item.name ? "Deleting..." : "Delete"}
+                {savingRowName === deleteDialog.item.name
+                  ? "Deleting..."
+                  : deleteDialog.needsReplacement && deleteDialog.affectedCount > 0
+                    ? "Reassign and delete"
+                    : "Delete"}
               </button>
             </div>
           </div>
