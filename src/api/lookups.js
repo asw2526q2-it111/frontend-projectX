@@ -12,6 +12,21 @@ export function createLookup(apiKey, resource, payload) {
   });
 }
 
+export function updateLookup(apiKey, resource, lookupName, payload) {
+  return apiRequest(`/api/${resource}/${encodeURIComponent(lookupName)}/`, {
+    apiKey,
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteLookup(apiKey, resource, lookupName) {
+  return apiRequest(`/api/${resource}/${encodeURIComponent(lookupName)}/`, {
+    apiKey,
+    method: "DELETE",
+  });
+}
+
 export function listStatuses(apiKey) {
   return apiRequest("/api/statuses/", { apiKey });
 }
