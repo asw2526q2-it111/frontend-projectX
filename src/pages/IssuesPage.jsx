@@ -6,13 +6,18 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { listLookup } from "../api/lookups";
 import { UserAvatar } from "../components/UserAvatar";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingState } from "../components/LoadingState";
 import { listIssues } from "../api/issues";
+import { listUsers } from "../api/users";
 import { useCurrentUser } from "../context/currentUser";
 import { useAsync } from "../hooks/useAsync";
 import { formatDate, initials } from "../utils/format";
+import { normalizePagedList } from "../utils/apiList";
+import { formatDate } from "../utils/format";
+import { getUserAvatarUrl, getUserInitials } from "../utils/user";
 
 const TABLE_SORTS = [
   { value: "type", label: "Type" },
@@ -33,48 +38,61 @@ export function IssuesPage() {
   const [draftFilters, setDraftFilters] = useState(createEmptyFilters);
   const [selectedFilters, setSelectedFilters] = useState(createEmptyFilters);
 
-  const filters = useMemo(
+  const issueQuery = useMemo(
     () => ({
       search: search.trim() || undefined,
       sort_by: sortBy,
       sort_direction: sortDirection,
+      filter_status: selectedFilters.status.length > 0 ? selectedFilters.status : undefined,
+      filter_type: selectedFilters.type.length > 0 ? selectedFilters.type : undefined,
+      filter_priority: selectedFilters.priority.length > 0 ? selectedFilters.priority : undefined,
+      filter_severity: selectedFilters.severity.length > 0 ? selectedFilters.severity : undefined,
+      filter_tag: selectedFilters.tag.length > 0 ? selectedFilters.tag : undefined,
+      filter_assignee_username:
+        selectedFilters.assignedTo.length > 0 ? selectedFilters.assignedTo : undefined,
+      filter_creator_username:
+        selectedFilters.createdBy.length > 0 ? selectedFilters.createdBy : undefined,
     }),
-    [search, sortBy, sortDirection]
+    [search, sortBy, sortDirection, selectedFilters]
   );
 
-  const { data, error, loading, reload } = useAsync(
-    () => listIssues(currentUser.apiKey, filters),
-    [currentUser.apiKey, filters]
+  const { data, error, loading } = useAsync(
+    () => listIssues(currentUser.apiKey, issueQuery),
+    [currentUser.apiKey, issueQuery]
   );
 
-  const issues = data?.results ?? [];
+  const filterDataState = useAsync(
+    async () => {
+      const [statuses, types, priorities, severities, tags, users] = await Promise.all([
+        listLookup(currentUser.apiKey, "statuses"),
+        listLookup(currentUser.apiKey, "types"),
+        listLookup(currentUser.apiKey, "priorities"),
+        listLookup(currentUser.apiKey, "severities"),
+        listLookup(currentUser.apiKey, "tags"),
+        listUsers(currentUser.apiKey),
+      ]);
+
+      return { statuses, types, priorities, severities, tags, users };
+    },
+    [currentUser.apiKey]
+  );
+
+  const issues = useMemo(() => normalizePagedList(data), [data]);
 
   const filterOptions = useMemo(
-    () => ({
-      status: collectNamedOptions(issues, (issue) => issue.status),
-      type: collectNamedOptions(issues, (issue) => issue.type),
-      priority: collectNamedOptions(issues, (issue) => issue.priority),
-      severity: collectNamedOptions(issues, (issue) => issue.severity),
-      tag: collectNamedOptions(issues, (issue) => issue.tags),
-      assignedTo: collectUserOptions(issues, (issue) => issue.assignee),
-      createdBy: collectUserOptions(issues, (issue) => issue.created_by),
-    }),
-    [issues]
-  );
-
-  const visibleIssues = useMemo(
     () =>
-      issues.filter((issue) => {
-        if (!matchesSingle(selectedFilters.status, issue.status)) return false;
-        if (!matchesSingle(selectedFilters.type, issue.type)) return false;
-        if (!matchesSingle(selectedFilters.priority, issue.priority)) return false;
-        if (!matchesSingle(selectedFilters.severity, issue.severity)) return false;
-        if (!matchesMany(selectedFilters.tag, issue.tags)) return false;
-        if (!matchesSingle(selectedFilters.assignedTo, issue.assignee, buildUserKey)) return false;
-        if (!matchesSingle(selectedFilters.createdBy, issue.created_by, buildUserKey)) return false;
-        return true;
-      }),
-    [issues, selectedFilters]
+      filterDataState.data
+        ? {
+            status: mapLookupOptions(filterDataState.data.statuses),
+            type: mapLookupOptions(filterDataState.data.types),
+            priority: mapLookupOptions(filterDataState.data.priorities),
+            severity: mapLookupOptions(filterDataState.data.severities),
+            tag: mapLookupOptions(filterDataState.data.tags),
+            assignedTo: mapUserOptions(filterDataState.data.users),
+            createdBy: mapUserOptions(filterDataState.data.users),
+          }
+        : createEmptyFilterOptions(),
+    [filterDataState.data]
   );
 
   const activeFilters = useMemo(
@@ -90,20 +108,20 @@ export function IssuesPage() {
   );
 
   const stats = useMemo(() => {
-    const assigned = visibleIssues.filter((issue) => issue.assignee).length;
+    const assigned = issues.filter((issue) => issue.assignee).length;
     return {
-      total: visibleIssues.length,
+      total: issues.length,
       assigned,
-      unassigned: visibleIssues.length - assigned,
+      unassigned: issues.length - assigned,
     };
-  }, [visibleIssues]);
+  }, [issues]);
 
   const recentIssues = useMemo(
     () =>
-      [...visibleIssues]
+      [...issues]
         .sort((left, right) => new Date(right.updated_at) - new Date(left.updated_at))
         .slice(0, 4),
-    [visibleIssues]
+    [issues]
   );
 
   function submitSearch(event) {
@@ -299,7 +317,7 @@ export function IssuesPage() {
             <h2>
               Issues
               {activeFilters.length > 0 || search ? (
-                <span className="results-count"> ({visibleIssues.length} results)</span>
+                <span className="results-count"> ({issues.length} results)</span>
               ) : null}
             </h2>
             <p>
@@ -322,7 +340,7 @@ export function IssuesPage() {
             <EmptyState title="No s'han pogut carregar les issues" description={error.message} />
           ) : null}
 
-          {!loading && !error && visibleIssues.length > 0 ? (
+          {!loading && !error && issues.length > 0 ? (
             <div className="issues-table-wrap">
               <div className="issues-table">
                 <div className="issues-table-row issues-table-row--header">
@@ -345,14 +363,14 @@ export function IssuesPage() {
                   ))}
                 </div>
 
-                {visibleIssues.map((issue) => (
+                {issues.map((issue) => (
                   <IssueTableRow key={issue.id} issue={issue} />
                 ))}
               </div>
             </div>
           ) : null}
 
-          {!loading && !error && visibleIssues.length === 0 ? (
+          {!loading && !error && issues.length === 0 ? (
             <EmptyState
               title="No issues match this search"
               description="Try another search term or clear active filters."
@@ -449,19 +467,32 @@ function IssueTableRow({ issue }) {
       </div>
       <div className="issues-table-cell issues-table-cell--modified">{formatDate(issue.updated_at)}</div>
       <div className="issues-table-cell issues-table-cell--assignee">
-        {issue.assignee ? (
-          <Link className="issue-assignee-link" to={`/profile/${issue.assignee.username}`}>
-            <span className="issue-assignee-avatar issue-assignee-avatar--initials">
-              {initials(issue.assignee.full_name)}
-            </span>
-          </Link>
-        ) : (
-          <span className="issue-assignee-avatar issue-assignee-avatar--empty" title="Unassigned">
-            <TriangleAlert size={14} aria-hidden="true" />
-          </span>
-        )}
+        <AssigneeAvatar user={issue.assignee} />
       </div>
     </div>
+  );
+}
+
+function AssigneeAvatar({ user }) {
+  if (!user?.username) {
+    return (
+      <span className="issue-assignee-avatar issue-assignee-avatar--empty" title="Unassigned">
+        <TriangleAlert size={14} aria-hidden="true" />
+      </span>
+    );
+  }
+
+  const avatarUrl = getUserAvatarUrl(user);
+  const userInitials = getUserInitials(user);
+
+  return (
+    <Link className="issue-assignee-link" to={`/profile/${user.username}`}>
+      {avatarUrl ? (
+        <img className="issue-assignee-avatar" src={avatarUrl} alt={`Avatar de ${user.username}`} />
+      ) : (
+        <span className="issue-assignee-avatar issue-assignee-avatar--initials">{userInitials}</span>
+      )}
+    </Link>
   );
 }
 
@@ -479,63 +510,24 @@ function ColorDot({ item, titlePrefix }) {
   );
 }
 
-function collectNamedOptions(issues, pickItems) {
-  const entries = new Map();
-
-  issues.forEach((issue) => {
-    const value = pickItems(issue);
-    const items = Array.isArray(value) ? value : value ? [value] : [];
-
-    items.forEach((item) => {
-      const key = buildItemKey(item);
-      if (!key || entries.has(key)) return;
-      entries.set(key, {
-        id: key,
-        name: item.name ?? "No value",
-      });
-    });
-  });
-
-  return [...entries.values()].sort((left, right) => left.name.localeCompare(right.name, "en"));
+function mapLookupOptions(payload) {
+  return normalizePagedList(payload)
+    .map((item) => ({
+      id: String(item.name ?? ""),
+      name: item.name ?? "No value",
+    }))
+    .filter((item) => item.id)
+    .sort((left, right) => left.name.localeCompare(right.name, "en"));
 }
 
-function buildItemKey(item) {
-  if (!item) return "";
-  return String(item.id ?? item.name ?? "");
-}
-
-function collectUserOptions(issues, pickUser) {
-  const entries = new Map();
-
-  issues.forEach((issue) => {
-    const user = pickUser(issue);
-    const key = buildUserKey(user);
-
-    if (!key || entries.has(key)) return;
-
-    entries.set(key, {
-      id: key,
-      name: user.username ?? user.full_name ?? "Unknown user",
-    });
-  });
-
-  return [...entries.values()].sort((left, right) => left.name.localeCompare(right.name, "en"));
-}
-
-function buildUserKey(user) {
-  if (!user) return "";
-  return String(user.username ?? user.id ?? "");
-}
-
-function matchesMany(selectedValues, items = []) {
-  if (selectedValues.length === 0) return true;
-  const values = items.map(buildItemKey);
-  return selectedValues.every((selectedValue) => values.includes(selectedValue));
-}
-
-function matchesSingle(selectedValues, item, buildKey = buildItemKey) {
-  if (selectedValues.length === 0) return true;
-  return selectedValues.includes(buildKey(item));
+function mapUserOptions(users) {
+  return normalizePagedList(users)
+    .map((user) => ({
+      id: String(user.username ?? ""),
+      name: user.full_name ? `${user.full_name} (@${user.username})` : user.username ?? "Unknown user",
+    }))
+    .filter((user) => user.id)
+    .sort((left, right) => left.name.localeCompare(right.name, "en"));
 }
 
 function findFilterLabel(options = [], value) {
@@ -554,6 +546,18 @@ function deadlineColor(value) {
 }
 
 function createEmptyFilters() {
+  return {
+    status: [],
+    priority: [],
+    severity: [],
+    type: [],
+    tag: [],
+    assignedTo: [],
+    createdBy: [],
+  };
+}
+
+function createEmptyFilterOptions() {
   return {
     status: [],
     priority: [],
