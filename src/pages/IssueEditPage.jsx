@@ -324,7 +324,7 @@ function AssigneePicker({ users, selectedUsername, currentUser, isOpen, onToggle
         <div className="create-person-card">
           <UserAvatar user={selectedUser} size="sm" />
           <div>
-            <strong>{getDisplayName(selectedUser)}</strong>
+            <strong>{getUserDisplayName(selectedUser)}</strong>
             <span>@{selectedUser.username}</span>
           </div>
         </div>
@@ -361,7 +361,7 @@ function AssigneePicker({ users, selectedUsername, currentUser, isOpen, onToggle
           >
             <UserAvatar user={user} size="sm" />
             <span className="create-user-copy">
-              <strong>{getDisplayName(user)}</strong>
+              <strong>{getUserDisplayName(user)}</strong>
               <small>@{user.username}</small>
             </span>
             {normalizeIdentity(user.username) === normalizeIdentity(selectedUsername) ? (
@@ -415,7 +415,7 @@ function WatchersPicker({ users, selectedUsernames, currentUser, isOpen, onToggl
             <div className="create-person-card" key={user.username}>
               <UserAvatar user={user} size="sm" />
               <div>
-                <strong>{getDisplayName(user)}</strong>
+                <strong>{getUserDisplayName(user)}</strong>
                 <span>@{user.username}</span>
               </div>
               <button type="button" onClick={() => toggleUser(user.username)} aria-label={`Remove ${user.username}`}>
@@ -447,7 +447,7 @@ function WatchersPicker({ users, selectedUsernames, currentUser, isOpen, onToggl
               >
                 <UserAvatar user={user} size="sm" />
                 <span className="create-user-copy">
-                  <strong>{getDisplayName(user)}</strong>
+                  <strong>{getUserDisplayName(user)}</strong>
                   <small>@{user.username}</small>
                 </span>
                 <span className={`create-user-check${isSelected ? " is-selected" : ""}`} aria-hidden="true">
