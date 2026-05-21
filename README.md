@@ -1,3 +1,19 @@
+# Issue Tracker
+
+## Informació del projecte
+
+### Autors
+* Jordi Abelló --- jordi.abello.sunyer@estudiantat.upc.edu
+* Àngela Buxó --- angela.buxo@estudiantat.upc.edu
+* Paula Mas --- paula.mas.pascual@estudiantat.upc.edu
+* Víctor Rocha --- victor.rocha@estudiantat.upc.edu
+
+### Link Taiga
+https://tree.taiga.io/project/jordiabesuny-asw2526q2-it111/timeline
+
+### Link al projecte desplegat a AWS
+https://frontend-project-x.vercel.app/issues
+
 # frontend-projectX
 
 Client web React per a l'API REST d'Issue Hub del projecte ASW.
